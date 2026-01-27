@@ -370,6 +370,36 @@ POST /api/tasks
 }
 ```
 
+## Quick Start
+
+### 🚀 For New Machines (Automated Setup)
+
+Run the setup script that handles everything:
+
+```powershell
+.\setup.ps1
+```
+
+This will:
+- ✅ Check prerequisites (.NET SDK, Node.js, SQL Server LocalDB)
+- ✅ Install missing tools (dotnet-ef)
+- ✅ Set up database (migrations)
+- ✅ Install frontend dependencies
+- ✅ Build the solution
+- ✅ Start all services
+
+### ⚡ For Existing Setup (Quick Run)
+
+If everything is already set up:
+
+```powershell
+.\run.ps1
+```
+
+### 📖 Manual Setup
+
+See [QUICK_START.md](QUICK_START.md) for detailed manual setup instructions.
+
 ## Running the Application
 
 ### Development Mode
@@ -402,7 +432,7 @@ POST /api/tasks
 
 6. **Access the application**:
    - Frontend: http://localhost:5173
-   - API Swagger: https://localhost:7000/swagger
+   - API Swagger: http://localhost:5063/swagger
 
 ## Testing
 
@@ -606,8 +636,7 @@ UserTasks/
 This project is created for educational/demonstration purposes.
 
 ## Author
-
-Full-Stack Developer Home Assignment
+Ofek Itzhaki
 
 ---
 
