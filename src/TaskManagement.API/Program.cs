@@ -3,9 +3,43 @@ using TaskManagement.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    // Configure array model binding for query parameters
+    // This ensures List<int> parameters bind correctly from ?tagIds=1&tagIds=2 format
+    options.ModelBinderProviders.Insert(0, new Microsoft.AspNetCore.Mvc.ModelBinding.Binders.ArrayModelBinderProvider());
+});
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Task Management API",
+        Version = "v1",
+        Description = "API for managing tasks, users, and tags",
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact
+        {
+            Name = "Task Management",
+        }
+    });
+    
+    // Include XML comments for better documentation
+    var apiXmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var apiXmlPath = Path.Combine(AppContext.BaseDirectory, apiXmlFile);
+    if (File.Exists(apiXmlPath))
+    {
+        c.IncludeXmlComments(apiXmlPath);
+    }
+    
+    // Include XML comments from Application layer (for DTOs)
+    var applicationAssembly = typeof(TaskManagement.Application.DTOs.CreateTaskDto).Assembly;
+    var applicationXmlFile = $"{applicationAssembly.GetName().Name}.xml";
+    var applicationXmlPath = Path.Combine(AppContext.BaseDirectory, "..", "TaskManagement.Application", "bin", "Debug", "net8.0", applicationXmlFile);
+    if (File.Exists(applicationXmlPath))
+    {
+        c.IncludeXmlComments(applicationXmlPath);
+    }
+});
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
