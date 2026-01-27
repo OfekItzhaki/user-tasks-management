@@ -1,7 +1,7 @@
-import axios from 'axios';
-import { Task, CreateTaskDto, UpdateTaskDto, Tag } from '../types';
+import axios, { AxiosError } from 'axios';
+import type { Task, CreateTaskDto, UpdateTaskDto, Tag } from '../types';
+import { getFriendlyErrorMessage } from '../utils/errorHandler';
 
-// Use proxy in development, or direct API URL in production
 const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'https://localhost:7000/api');
 
 const apiClient = axios.create({
@@ -11,11 +11,11 @@ const apiClient = axios.create({
   },
 });
 
-// Request interceptor for error handling
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
-    console.error('API Error:', error);
+  (error: AxiosError) => {
+    const friendlyMessage = getFriendlyErrorMessage(error, 'complete the request');
+    console.error('API Error:', friendlyMessage, error);
     return Promise.reject(error);
   }
 );
