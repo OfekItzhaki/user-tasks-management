@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using TaskManagement.Application.DTOs;
 using TaskManagement.Application.Mappings;
 using TaskManagement.Domain.Entities;
+using TaskManagement.Domain.Enums;
 using TaskManagement.Infrastructure.Data;
 
 namespace TaskManagement.Application.Commands.Tasks;
@@ -24,12 +25,34 @@ public class CreateTaskCommandHandler : IRequestHandler<CreateTaskCommand, TaskD
             Description = request.Task.Description,
             DueDate = request.Task.DueDate,
             Priority = request.Task.Priority,
-            UserId = request.Task.UserId,
+            CreatedByUserId = request.Task.CreatedByUserId,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
 
-        // Add tags if provided
+        if (request.Task.UserIds.Any())
+        {
+            var users = await _context.Users
+                .Where(u => request.Task.UserIds.Contains(u.Id))
+                .ToListAsync(cancellationToken);
+
+            var now = DateTime.UtcNow;
+            foreach (var user in users)
+            {
+                var role = user.Id == request.Task.CreatedByUserId 
+                    ? UserTaskRole.Owner 
+                    : UserTaskRole.Assignee;
+                
+                task.UserTasks.Add(new UserTask
+                {
+                    Task = task,
+                    User = user,
+                    Role = role,
+                    AssignedAt = now
+                });
+            }
+        }
+
         if (request.Task.TagIds.Any())
         {
             var tags = await _context.Tags
@@ -49,9 +72,10 @@ public class CreateTaskCommandHandler : IRequestHandler<CreateTaskCommand, TaskD
         _context.Tasks.Add(task);
         await _context.SaveChangesAsync(cancellationToken);
 
-        // Load related data for response
         await _context.Entry(task)
-            .Reference(t => t.User)
+            .Collection(t => t.UserTasks)
+            .Query()
+            .Include(ut => ut.User)
             .LoadAsync(cancellationToken);
 
         await _context.Entry(task)

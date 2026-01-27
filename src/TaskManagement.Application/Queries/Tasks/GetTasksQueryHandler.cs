@@ -18,7 +18,8 @@ public class GetTasksQueryHandler : IRequestHandler<GetTasksQuery, List<TaskDto>
     public async Task<List<TaskDto>> Handle(GetTasksQuery request, CancellationToken cancellationToken)
     {
         var tasks = await _context.Tasks
-            .Include(t => t.User)
+            .Include(t => t.UserTasks)
+                .ThenInclude(ut => ut.User)
             .Include(t => t.TaskTags)
                 .ThenInclude(tt => tt.Tag)
             .OrderByDescending(t => t.CreatedAt)

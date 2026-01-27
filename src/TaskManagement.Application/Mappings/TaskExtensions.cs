@@ -1,11 +1,12 @@
 using TaskManagement.Application.DTOs;
 using TaskManagement.Domain.Entities;
+using DomainTask = TaskManagement.Domain.Entities.Task;
 
 namespace TaskManagement.Application.Mappings;
 
 public static class TaskExtensions
 {
-    public static TaskDto ToTaskDto(this Task task)
+    public static TaskDto ToTaskDto(this DomainTask task)
     {
         return new TaskDto
         {
@@ -14,13 +15,19 @@ public static class TaskExtensions
             Description = task.Description,
             DueDate = task.DueDate,
             Priority = task.Priority,
-            User = new UserDto
+            CreatedByUserId = task.CreatedByUserId,
+            Users = task.UserTasks.Select(ut => new UserTaskDto
             {
-                Id = task.User.Id,
-                FullName = task.User.FullName,
-                Telephone = task.User.Telephone,
-                Email = task.User.Email
-            },
+                User = new UserDto
+                {
+                    Id = ut.User.Id,
+                    FullName = ut.User.FullName,
+                    Telephone = ut.User.Telephone,
+                    Email = ut.User.Email
+                },
+                Role = ut.Role,
+                AssignedAt = ut.AssignedAt
+            }).ToList(),
             Tags = task.TaskTags.Select(tt => new TagDto
             {
                 Id = tt.Tag.Id,

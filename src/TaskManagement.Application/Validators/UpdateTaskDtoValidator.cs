@@ -24,8 +24,9 @@ public class UpdateTaskDtoValidator : AbstractValidator<UpdateTaskDto>
         RuleFor(x => x.Priority)
             .IsInEnum().WithMessage("Priority must be a valid value.");
 
-        RuleFor(x => x.UserId)
-            .GreaterThan(0).WithMessage("User ID must be greater than 0.");
+        RuleFor(x => x.UserIds)
+            .NotNull().WithMessage("User IDs cannot be null.")
+            .Must(ids => ids != null && ids.Count > 0).WithMessage("At least one user must be assigned to the task.");
 
         RuleFor(x => x.TagIds)
             .NotNull().WithMessage("Tag IDs cannot be null.");

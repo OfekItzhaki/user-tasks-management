@@ -18,7 +18,8 @@ public class UpdateTaskCommandHandler : IRequestHandler<UpdateTaskCommand, TaskD
     public async Task<TaskDto> Handle(UpdateTaskCommand request, CancellationToken cancellationToken)
     {
         var task = await _context.Tasks
-            .Include(t => t.User)
+            .Include(t => t.UserTasks)
+                .ThenInclude(ut => ut.User)
             .Include(t => t.TaskTags)
                 .ThenInclude(tt => tt.Tag)
             .FirstOrDefaultAsync(t => t.Id == request.Task.Id, cancellationToken);
@@ -32,10 +33,33 @@ public class UpdateTaskCommandHandler : IRequestHandler<UpdateTaskCommand, TaskD
         task.Description = request.Task.Description;
         task.DueDate = request.Task.DueDate;
         task.Priority = request.Task.Priority;
-        task.UserId = request.Task.UserId;
         task.UpdatedAt = DateTime.UtcNow;
 
-        // Update tags
+        _context.UserTasks.RemoveRange(task.UserTasks);
+        
+        if (request.Task.UserIds.Any())
+        {
+            var users = await _context.Users
+                .Where(u => request.Task.UserIds.Contains(u.Id))
+                .ToListAsync(cancellationToken);
+
+            var now = DateTime.UtcNow;
+            foreach (var user in users)
+            {
+                var role = user.Id == task.CreatedByUserId 
+                    ? Domain.Enums.UserTaskRole.Owner 
+                    : Domain.Enums.UserTaskRole.Assignee;
+                
+                task.UserTasks.Add(new Domain.Entities.UserTask
+                {
+                    Task = task,
+                    User = user,
+                    Role = role,
+                    AssignedAt = now
+                });
+            }
+        }
+
         _context.TaskTags.RemoveRange(task.TaskTags);
         
         if (request.Task.TagIds.Any())
@@ -56,9 +80,10 @@ public class UpdateTaskCommandHandler : IRequestHandler<UpdateTaskCommand, TaskD
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        // Reload to ensure all navigation properties are loaded
         await _context.Entry(task)
-            .Reference(t => t.User)
+            .Collection(t => t.UserTasks)
+            .Query()
+            .Include(ut => ut.User)
             .LoadAsync(cancellationToken);
 
         await _context.Entry(task)

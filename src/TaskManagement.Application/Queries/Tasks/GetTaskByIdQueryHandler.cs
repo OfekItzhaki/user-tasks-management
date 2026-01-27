@@ -18,7 +18,8 @@ public class GetTaskByIdQueryHandler : IRequestHandler<GetTaskByIdQuery, TaskDto
     public async Task<TaskDto> Handle(GetTaskByIdQuery request, CancellationToken cancellationToken)
     {
         var task = await _context.Tasks
-            .Include(t => t.User)
+            .Include(t => t.UserTasks)
+                .ThenInclude(ut => ut.User)
             .Include(t => t.TaskTags)
                 .ThenInclude(tt => tt.Tag)
             .FirstOrDefaultAsync(t => t.Id == request.Id, cancellationToken);
