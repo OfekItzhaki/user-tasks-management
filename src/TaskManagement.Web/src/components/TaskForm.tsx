@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { CreateTaskDto, Priority, Tag } from '../types';
 import { TagSelector } from './TagSelector';
+import { PrioritySelector } from './PrioritySelector';
 import { taskSchema } from '../schemas/taskSchema';
 
 interface TaskFormProps {
@@ -45,10 +46,17 @@ export const TaskForm: React.FC<TaskFormProps> = ({
 
   const selectedTagIds = watch('tagIds');
   const selectedUserIds = watch('userIds');
+  const [selectedPriorities, setSelectedPriorities] = useState<Priority[]>(
+    initialData?.priority ? [initialData.priority] : [Priority.Medium]
+  );
 
   useEffect(() => {
     if (initialData?.tagIds) {
       setValue('tagIds', initialData.tagIds);
+    }
+    if (initialData?.priority) {
+      setSelectedPriorities([initialData.priority]);
+      setValue('priority', initialData.priority);
     }
   }, [initialData, setValue]);
 
@@ -56,8 +64,39 @@ export const TaskForm: React.FC<TaskFormProps> = ({
     setValue('tagIds', tagIds, { shouldValidate: true });
   };
 
+  const handlePriorityChange = (priorities: Priority[]) => {
+    setSelectedPriorities(priorities);
+    // Use the highest priority (Critical > High > Medium > Low)
+    // Ensure at least one priority is selected
+    if (priorities.length === 0) {
+      const defaultPriority = Priority.Medium;
+      setSelectedPriorities([defaultPriority]);
+      setValue('priority', defaultPriority, { shouldValidate: true });
+    } else {
+      const highestPriority = priorities.reduce((highest, current) => current > highest ? current : highest, priorities[0]);
+      setValue('priority', highestPriority, { shouldValidate: true });
+    }
+  };
+
+  const onSubmitHandler = (data: CreateTaskDto) => {
+    // Ensure createdByUserId is set if not already set
+    if (!data.createdByUserId || data.createdByUserId === 0) {
+      if (data.userIds && data.userIds.length > 0) {
+        data.createdByUserId = data.userIds[0];
+      } else {
+        console.error('No users selected and no createdByUserId set');
+        return;
+      }
+    }
+    // Ensure priority is set from selectedPriorities
+    if (selectedPriorities.length > 0) {
+      data.priority = selectedPriorities.reduce((highest, current) => current > highest ? current : highest, selectedPriorities[0]);
+    }
+    onSubmit(data);
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmitHandler)} className="space-y-6">
       <div>
         <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Title *
@@ -100,20 +139,17 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       </div>
 
       <div>
-        <label htmlFor="priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Priority *
-        </label>
-        <select
-          id="priority"
-          {...register('priority', { valueAsNumber: true })}
-          className={`w-full premium-input ${errors.priority ? 'border-red-500 focus:ring-red-500' : ''}`}
-        >
-          <option value={Priority.Low}>Low</option>
-          <option value={Priority.Medium}>Medium</option>
-          <option value={Priority.High}>High</option>
-          <option value={Priority.Critical}>Critical</option>
-        </select>
+        <PrioritySelector
+          selectedPriorities={selectedPriorities}
+          onChange={handlePriorityChange}
+          multiple={true}
+        />
         {errors.priority && <span className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.priority.message}</span>}
+        {selectedPriorities.length > 1 && (
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Multiple priorities selected. Highest priority ({Priority[selectedPriorities.reduce((highest, current) => current > highest ? current : highest, selectedPriorities[0])]}) will be saved.
+          </p>
+        )}
       </div>
 
       <div>
@@ -121,7 +157,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
         <div className="glass-card p-4 max-h-48 overflow-y-auto">
           <div className="space-y-2">
             {users.map((user) => (
-              <label key={user.id} className="flex items-center gap-2 cursor-pointer hover:bg-white/50 dark:hover:bg-gray-800/50 p-2 rounded-lg transition-colors">
+              <label key={user.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 p-2 rounded-lg transition-colors">
                 <input
                   type="checkbox"
                   checked={selectedUserIds.includes(user.id)}
@@ -131,9 +167,9 @@ export const TaskForm: React.FC<TaskFormProps> = ({
                       : [...selectedUserIds, user.id];
                     setValue('userIds', newIds, { shouldValidate: true });
                   }}
-                  className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                  className="w-4 h-4 text-gray-600 dark:text-primary-600 rounded focus:ring-gray-500 dark:focus:ring-primary-500"
                 />
-                <span className="text-sm text-gray-700 dark:text-gray-300">{user.fullName} ({user.email})</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">{user.fullName}</span>
               </label>
             ))}
           </div>
@@ -156,7 +192,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
           <button 
             type="button" 
             onClick={onCancel} 
-            className="px-6 py-2 glass-card text-gray-700 dark:text-gray-300 rounded-lg hover:bg-white/80 dark:hover:bg-gray-800/80 transition-colors font-medium"
+            className="px-6 py-2 glass-card text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/80 transition-colors font-medium"
           >
             Cancel
           </button>

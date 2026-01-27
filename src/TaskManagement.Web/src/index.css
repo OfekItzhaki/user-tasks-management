@@ -10,7 +10,7 @@
       sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    @apply bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950;
+    @apply bg-white dark:from-gray-950 dark:via-gray-900 dark:to-gray-950;
     background-attachment: fixed;
   }
 
@@ -23,8 +23,8 @@
 @layer components {
   /* Glassmorphism Card */
   .glass-card {
-    @apply bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/20 dark:border-gray-700/30;
-    @apply shadow-glass dark:shadow-glass-dark;
+    @apply bg-white dark:bg-gray-900/70 backdrop-blur-xl border border-gray-200 dark:border-gray-700/30;
+    @apply shadow-sm dark:shadow-glass-dark;
     @apply rounded-2xl;
   }
 
@@ -38,7 +38,7 @@
   .glass-button {
     @apply glass-card;
     @apply px-6 py-3 font-medium;
-    @apply hover:bg-white/80 dark:hover:bg-gray-800/80;
+    @apply hover:bg-gray-50 dark:hover:bg-gray-800/80;
     @apply active:scale-95 transition-transform duration-150;
   }
 
@@ -46,8 +46,40 @@
   .premium-input {
     @apply glass-card;
     @apply px-4 py-3;
-    @apply focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500;
+    @apply focus:ring-2 focus:ring-gray-300 dark:focus:ring-primary-500/50 focus:border-gray-400 dark:focus:border-primary-500;
     @apply placeholder:text-gray-400 dark:placeholder:text-gray-500;
+    @apply text-gray-900 dark:text-gray-100;
+    @apply bg-white dark:bg-gray-900/70;
+  }
+
+  /* Select and Option Dark Mode */
+  select.premium-input {
+    @apply text-gray-900 dark:text-gray-100;
+    @apply bg-white dark:bg-gray-900/70;
+  }
+
+  select.premium-input option {
+    background-color: rgb(255, 255, 255);
+    color: rgb(17, 24, 39);
+  }
+
+  .dark select.premium-input option {
+    background-color: rgba(17, 24, 39, 0.9);
+    color: rgb(243, 244, 246);
+  }
+
+  /* Date Input Dark Mode */
+  input[type="date"].premium-input {
+    @apply text-gray-900 dark:text-gray-100;
+    color-scheme: light dark;
+  }
+
+  input[type="date"].premium-input::-webkit-calendar-picker-indicator {
+    filter: invert(0);
+  }
+
+  .dark input[type="date"].premium-input::-webkit-calendar-picker-indicator {
+    filter: invert(1);
   }
 
   /* Gradient Text */
@@ -85,7 +117,7 @@
   .premium-header-section::after {
     content: '';
     @apply absolute bottom-0 left-0 right-0 h-0.5;
-    @apply bg-gradient-to-r from-transparent via-primary-500/30 to-transparent;
+    @apply bg-gradient-to-r from-transparent via-gray-300 dark:via-primary-500/30 to-transparent;
     @apply opacity-60;
   }
 
@@ -100,7 +132,7 @@
   /* Premium Button - Unselected State */
   .premium-button-unselected {
     @apply glass-card text-gray-700 dark:text-gray-300;
-    @apply hover:bg-white/90 dark:hover:bg-gray-800/90;
+    @apply hover:bg-gray-50 dark:hover:bg-gray-800/90;
     @apply hover:scale-102;
   }
 

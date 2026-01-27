@@ -17,8 +17,13 @@ export default function Pagination({
   onItemsPerPageChange,
   isRtl = false,
 }: PaginationProps) {
-  const startItem = (currentPage - 1) * itemsPerPage + 1;
-  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+  // Validate inputs
+  const safePage = Math.max(1, currentPage);
+  const safePageSize = Math.max(1, itemsPerPage);
+  const safeTotalPages = Math.max(0, totalPages);
+  
+  const startItem = safeTotalPages > 0 ? (safePage - 1) * safePageSize + 1 : 0;
+  const endItem = safeTotalPages > 0 ? Math.min(safePage * safePageSize, totalItems) : 0;
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
@@ -62,7 +67,7 @@ export default function Pagination({
           <select
             value={itemsPerPage}
             onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-            className="ml-2 glass-card rounded-xl border-0 px-3 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-200 cursor-pointer"
+            className="ml-2 glass-card rounded-xl border-0 px-3 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-primary-500/50 transition-all duration-200 cursor-pointer"
           >
             <option value={10}>10 per page</option>
             <option value={25}>25 per page</option>
@@ -78,7 +83,7 @@ export default function Pagination({
             type="button"
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 glass-card rounded-xl hover:bg-white/80 dark:hover:bg-gray-800/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+            className="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 glass-card rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
           >
             Previous
           </button>
@@ -104,8 +109,8 @@ export default function Pagination({
                   onClick={() => onPageChange(pageNum)}
                   className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-200 ${
                     currentPage === pageNum
-                      ? 'bg-gradient-to-r from-primary-600 to-purple-600 text-white shadow-lg shadow-primary-500/30'
-                      : 'text-gray-700 dark:text-gray-300 glass-card hover:bg-white/80 dark:hover:bg-gray-800/80'
+                      ? 'bg-gray-700 dark:bg-gradient-to-r dark:from-primary-600 dark:to-purple-600 text-white shadow-lg shadow-gray-500/20 dark:shadow-primary-500/30'
+                      : 'text-gray-700 dark:text-gray-300 glass-card hover:bg-gray-50 dark:hover:bg-gray-800/80'
                   }`}
                 >
                   {pageNum}
@@ -118,7 +123,7 @@ export default function Pagination({
             type="button"
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 glass-card rounded-xl hover:bg-white/80 dark:hover:bg-gray-800/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+            className="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 glass-card rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
           >
             Next
           </button>

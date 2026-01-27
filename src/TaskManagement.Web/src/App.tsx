@@ -1,24 +1,38 @@
 import React, { useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useAppDispatch, useAppSelector } from './store/hooks';
-import { fetchTasks, createTask, updateTask, deleteTask, setSelectedTask, setCurrentPage, setItemsPerPage } from './store/taskSlice';
+import { 
+  fetchTasks, 
+  createTask, 
+  updateTask, 
+  deleteTask, 
+  setSelectedTask, 
+  setCurrentPage, 
+  setItemsPerPage,
+  setSearchTerm,
+  setPriorityFilter,
+  setPrioritiesFilter,
+  setUserIdFilter,
+  setTagIdFilter,
+  setTagIdsFilter,
+  setSortBy,
+  setSortOrder,
+  clearFilters
+} from './store/taskSlice';
 import { fetchTags } from './store/tagSlice';
+import { fetchUsers } from './store/userSlice';
 import { TaskList } from './components/TaskList';
 import { TaskForm } from './components/TaskForm';
+import { TaskFilters } from './components/TaskFilters';
 import FloatingActionButton from './components/FloatingActionButton';
 import ErrorFallback from './components/ErrorFallback';
 import { CreateTaskDto, UpdateTaskDto, Task } from './types';
 
-const MOCK_USERS = [
-  { id: 1, fullName: 'John Doe', email: 'john@example.com', telephone: '123-456-7890' },
-  { id: 2, fullName: 'Jane Smith', email: 'jane@example.com', telephone: '098-765-4321' },
-  { id: 3, fullName: 'Bob Johnson', email: 'bob@example.com', telephone: '555-123-4567' },
-];
-
 function App() {
   const dispatch = useAppDispatch();
-  const { tasks, loading, error, selectedTask, pagination } = useAppSelector((state) => state.tasks);
+  const { tasks, loading, error, selectedTask, pagination, filters } = useAppSelector((state) => state.tasks);
   const { tags } = useAppSelector((state) => state.tags);
+  const { users } = useAppSelector((state) => state.users);
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [darkMode, setDarkMode] = useState(() => {
@@ -38,12 +52,24 @@ function App() {
   useEffect(() => {
     dispatch(fetchTasks());
     dispatch(fetchTags());
+    dispatch(fetchUsers());
   }, [dispatch]);
+
+  // Refetch tasks when pagination or filters change
+  useEffect(() => {
+    dispatch(fetchTasks());
+  }, [dispatch, pagination.currentPage, pagination.itemsPerPage, filters]);
 
   const handleCreateTask = async (data: CreateTaskDto) => {
     try {
-      if (!data.createdByUserId && data.userIds.length > 0) {
-        data.createdByUserId = data.userIds[0];
+      // Ensure createdByUserId is set
+      if (!data.createdByUserId || data.createdByUserId === 0) {
+        if (data.userIds && data.userIds.length > 0) {
+          data.createdByUserId = data.userIds[0];
+        } else {
+          console.error('Cannot create task: No users selected');
+          return;
+        }
       }
       await dispatch(createTask(data)).unwrap();
       setShowForm(false);
@@ -67,13 +93,11 @@ function App() {
   };
 
   const handleDeleteTask = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this task?')) {
-      try {
-        await dispatch(deleteTask(id)).unwrap();
-        dispatch(fetchTasks());
-      } catch (err) {
-        console.error('Failed to delete task:', err);
-      }
+    try {
+      await dispatch(deleteTask(id)).unwrap();
+      dispatch(fetchTasks());
+    } catch (err) {
+      console.error('Failed to delete task:', err);
     }
   };
 
@@ -100,14 +124,14 @@ function App() {
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <div className="min-h-screen">
-        <header className="glass-card border-b border-white/20 dark:border-gray-700/30 sticky top-0 z-50 backdrop-blur-xl mb-6">
+        <header className="glass-card border-b border-gray-200 dark:border-gray-700/30 sticky top-0 z-50 backdrop-blur-xl mb-6 bg-white dark:bg-gray-900/70">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <h1 className="text-2xl font-bold gradient-text">Task Management System</h1>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setDarkMode(!darkMode)}
-                  className="p-2 glass-card rounded-lg hover:bg-white/80 dark:hover:bg-gray-800/80 transition-colors"
+                  className="p-2 glass-card rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/80 transition-colors"
                   aria-label="Toggle dark mode"
                 >
                   {darkMode ? (
@@ -150,24 +174,49 @@ function App() {
                         userIds: editingTask.users.map((ut) => ut.user.id),
                         tagIds: editingTask.tags.map((t) => t.id),
                       }
-                    : undefined
+                    : {
+                        createdByUserId: users.length > 0 ? users[0].id : 0,
+                      }
                 }
                 tags={tags}
-                users={MOCK_USERS}
+                users={users.map(u => ({ id: u.id, fullName: u.fullName }))}
                 onCancel={handleCancel}
               />
             </div>
           ) : (
-            <TaskList
-              tasks={tasks}
-              onEdit={handleEditTask}
-              onDelete={handleDeleteTask}
-              loading={loading}
-              currentPage={pagination.currentPage}
-              itemsPerPage={pagination.itemsPerPage}
-              onPageChange={handlePageChange}
-              onItemsPerPageChange={handleItemsPerPageChange}
-            />
+            <>
+              <TaskFilters
+                searchTerm={filters.searchTerm || ''}
+                priority={filters.priority}
+                priorities={filters.priorities}
+                userId={filters.userId}
+                tagId={filters.tagId}
+                tagIds={filters.tagIds}
+                sortBy={filters.sortBy || 'createdAt'}
+                sortOrder={filters.sortOrder || 'desc'}
+                users={users}
+                tags={tags}
+                onSearchChange={(value) => dispatch(setSearchTerm(value))}
+                onPriorityChange={(value) => dispatch(setPriorityFilter(value))}
+                onPrioritiesChange={(value) => dispatch(setPrioritiesFilter(value))}
+                onUserIdChange={(value) => dispatch(setUserIdFilter(value))}
+                onTagIdChange={(value) => dispatch(setTagIdFilter(value))}
+                onTagIdsChange={(value) => dispatch(setTagIdsFilter(value))}
+                onSortByChange={(value) => dispatch(setSortBy(value))}
+                onSortOrderChange={(value) => dispatch(setSortOrder(value))}
+                onClearFilters={() => dispatch(clearFilters())}
+              />
+              <TaskList
+                tasks={tasks}
+                onEdit={handleEditTask}
+                onDelete={handleDeleteTask}
+                loading={loading}
+                currentPage={pagination.currentPage}
+                itemsPerPage={pagination.itemsPerPage}
+                onPageChange={handlePageChange}
+                onItemsPerPageChange={handleItemsPerPageChange}
+              />
+            </>
           )}
         </main>
 
