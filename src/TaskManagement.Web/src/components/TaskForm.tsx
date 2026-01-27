@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
 import { CreateTaskDto, Priority, Tag } from '../types';
 import { TagSelector } from './TagSelector';
+import { taskSchema } from '../schemas/taskSchema';
 
 interface TaskFormProps {
   onSubmit: (data: CreateTaskDto) => void;
@@ -12,22 +12,6 @@ interface TaskFormProps {
   users: Array<{ id: number; fullName: string }>;
   onCancel?: () => void;
 }
-
-const schema = yup.object({
-  title: yup.string().required('Title is required').max(200, 'Title must not exceed 200 characters'),
-  description: yup
-    .string()
-    .required('Description is required')
-    .max(1000, 'Description must not exceed 1000 characters'),
-  dueDate: yup
-    .date()
-    .required('Due date is required')
-    .min(new Date().setHours(0, 0, 0, 0), 'Due date must be today or in the future')
-    .typeError('Please enter a valid date'),
-  priority: yup.number().required('Priority is required').oneOf([1, 2, 3, 4], 'Invalid priority'),
-  userId: yup.number().required('User is required').min(1, 'Please select a user'),
-  tagIds: yup.array().of(yup.number()).required(),
-});
 
 export const TaskForm: React.FC<TaskFormProps> = ({
   onSubmit,
@@ -43,18 +27,24 @@ export const TaskForm: React.FC<TaskFormProps> = ({
     setValue,
     watch,
   } = useForm<CreateTaskDto>({
-    resolver: yupResolver(schema),
+    resolver: yupResolver(taskSchema),
     defaultValues: {
       title: initialData?.title || '',
       description: initialData?.description || '',
-      dueDate: initialData?.dueDate || '',
+      dueDate: initialData?.dueDate 
+        ? (typeof initialData.dueDate === 'string' 
+            ? initialData.dueDate.split('T')[0] 
+            : new Date(initialData.dueDate).toISOString().split('T')[0])
+        : '',
       priority: initialData?.priority || Priority.Medium,
-      userId: initialData?.userId || 0,
+      createdByUserId: initialData?.createdByUserId || 0,
+      userIds: initialData?.userIds || [],
       tagIds: initialData?.tagIds || [],
     },
   });
 
   const selectedTagIds = watch('tagIds');
+  const selectedUserIds = watch('userIds');
 
   useEffect(() => {
     if (initialData?.tagIds) {
@@ -67,103 +57,116 @@ export const TaskForm: React.FC<TaskFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="task-form">
-      <div className="form-group">
-        <label htmlFor="title" className="form-label">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div>
+        <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Title *
         </label>
         <input
           id="title"
           type="text"
           {...register('title')}
-          className={`form-input ${errors.title ? 'error' : ''}`}
+          className={`w-full premium-input ${errors.title ? 'border-red-500 focus:ring-red-500' : ''}`}
         />
-        {errors.title && <span className="error-message">{errors.title.message}</span>}
+        {errors.title && <span className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.title.message}</span>}
       </div>
 
-      <div className="form-group">
-        <label htmlFor="description" className="form-label">
+      <div>
+        <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Description *
         </label>
         <textarea
           id="description"
           {...register('description')}
           rows={4}
-          className={`form-input ${errors.description ? 'error' : ''}`}
+          className={`w-full premium-input ${errors.description ? 'border-red-500 focus:ring-red-500' : ''}`}
         />
         {errors.description && (
-          <span className="error-message">{errors.description.message}</span>
+          <span className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.description.message}</span>
         )}
       </div>
 
-      <div className="form-group">
-        <label htmlFor="dueDate" className="form-label">
+      <div>
+        <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Due Date *
         </label>
         <input
           id="dueDate"
           type="date"
           {...register('dueDate')}
-          className={`form-input ${errors.dueDate ? 'error' : ''}`}
+          className={`w-full premium-input ${errors.dueDate ? 'border-red-500 focus:ring-red-500' : ''}`}
         />
-        {errors.dueDate && <span className="error-message">{errors.dueDate.message}</span>}
+        {errors.dueDate && <span className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.dueDate.message}</span>}
       </div>
 
-      <div className="form-group">
-        <label htmlFor="priority" className="form-label">
+      <div>
+        <label htmlFor="priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Priority *
         </label>
         <select
           id="priority"
           {...register('priority', { valueAsNumber: true })}
-          className={`form-input ${errors.priority ? 'error' : ''}`}
+          className={`w-full premium-input ${errors.priority ? 'border-red-500 focus:ring-red-500' : ''}`}
         >
           <option value={Priority.Low}>Low</option>
           <option value={Priority.Medium}>Medium</option>
           <option value={Priority.High}>High</option>
           <option value={Priority.Critical}>Critical</option>
         </select>
-        {errors.priority && <span className="error-message">{errors.priority.message}</span>}
+        {errors.priority && <span className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.priority.message}</span>}
       </div>
 
-      <div className="form-group">
-        <label htmlFor="userId" className="form-label">
-          User *
-        </label>
-        <select
-          id="userId"
-          {...register('userId', { valueAsNumber: true })}
-          className={`form-input ${errors.userId ? 'error' : ''}`}
-        >
-          <option value={0}>Select a user</option>
-          {users.map((user) => (
-            <option key={user.id} value={user.id}>
-              {user.fullName}
-            </option>
-          ))}
-        </select>
-        {errors.userId && <span className="error-message">{errors.userId.message}</span>}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Users *</label>
+        <div className="glass-card p-4 max-h-48 overflow-y-auto">
+          <div className="space-y-2">
+            {users.map((user) => (
+              <label key={user.id} className="flex items-center gap-2 cursor-pointer hover:bg-white/50 dark:hover:bg-gray-800/50 p-2 rounded-lg transition-colors">
+                <input
+                  type="checkbox"
+                  checked={selectedUserIds.includes(user.id)}
+                  onChange={() => {
+                    const newIds = selectedUserIds.includes(user.id)
+                      ? selectedUserIds.filter((id) => id !== user.id)
+                      : [...selectedUserIds, user.id];
+                    setValue('userIds', newIds, { shouldValidate: true });
+                  }}
+                  className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">{user.fullName} ({user.email})</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        {errors.userIds && <span className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.userIds.message}</span>}
       </div>
 
-      <div className="form-group">
+      <div>
         <TagSelector
           tags={tags}
           selectedTagIds={selectedTagIds}
           onChange={handleTagChange}
           multiple={true}
         />
-        {errors.tagIds && <span className="error-message">Please select at least one tag</span>}
+        {errors.tagIds && <span className="mt-1 text-sm text-red-600 dark:text-red-400">Please select at least one tag</span>}
       </div>
 
-      <div className="form-actions">
-        <button type="submit" className="btn btn-primary">
-          Save
-        </button>
+      <div className="flex gap-3 justify-end pt-4">
         {onCancel && (
-          <button type="button" onClick={onCancel} className="btn btn-secondary">
+          <button 
+            type="button" 
+            onClick={onCancel} 
+            className="px-6 py-2 glass-card text-gray-700 dark:text-gray-300 rounded-lg hover:bg-white/80 dark:hover:bg-gray-800/80 transition-colors font-medium"
+          >
             Cancel
           </button>
         )}
+        <button 
+          type="submit" 
+          className="px-6 py-2 bg-gradient-to-r from-primary-600 to-purple-600 text-white rounded-lg hover:from-primary-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg shadow-primary-500/30"
+        >
+          Save
+        </button>
       </div>
     </form>
   );
