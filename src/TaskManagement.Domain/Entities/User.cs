@@ -10,5 +10,5 @@ public class User
     public DateTime UpdatedAt { get; set; }
 
     // Navigation properties
-    public ICollection<Task> Tasks { get; set; } = new List<Task>();
+    public ICollection<UserTask> UserTasks { get; set; } = new List<UserTask>();
 }
