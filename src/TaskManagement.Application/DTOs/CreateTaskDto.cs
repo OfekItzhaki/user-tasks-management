@@ -8,6 +8,7 @@ public class CreateTaskDto
     public string Description { get; set; } = string.Empty;
     public DateTime DueDate { get; set; }
     public Priority Priority { get; set; }
-    public int UserId { get; set; }
+    public int CreatedByUserId { get; set; }
+    public List<int> UserIds { get; set; } = new();
     public List<int> TagIds { get; set; } = new();
 }

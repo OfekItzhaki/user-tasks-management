@@ -9,6 +9,7 @@ public class TaskDto
     public string Description { get; set; } = string.Empty;
     public DateTime DueDate { get; set; }
     public Priority Priority { get; set; }
-    public UserDto User { get; set; } = null!;
+    public int CreatedByUserId { get; set; }
+    public List<UserTaskDto> Users { get; set; } = new();
     public List<TagDto> Tags { get; set; } = new();
 }

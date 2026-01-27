@@ -9,6 +9,6 @@ public class UpdateTaskDto
     public string Description { get; set; } = string.Empty;
     public DateTime DueDate { get; set; }
     public Priority Priority { get; set; }
-    public int UserId { get; set; }
+    public List<int> UserIds { get; set; } = new();
     public List<int> TagIds { get; set; } = new();
 }
