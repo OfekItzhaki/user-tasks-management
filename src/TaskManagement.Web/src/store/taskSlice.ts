@@ -15,11 +15,9 @@ interface TaskState {
   };
   filters: {
     searchTerm?: string;
-    priority?: number; // Single priority (backward compatibility)
-    priorities?: number[]; // Multiple priorities
+    priorities?: number[]; // Multiple priorities only
     userId?: number;
-    tagId?: number; // Single tag (backward compatibility)
-    tagIds?: number[]; // Multiple tags
+    tagIds?: number[]; // Multiple tags only
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
   };
@@ -38,11 +36,9 @@ const initialState: TaskState = {
   },
   filters: {
     searchTerm: undefined,
-    priority: undefined,
-    priorities: undefined,
+    priorities: [], // Initialize as empty array
     userId: undefined,
-    tagId: undefined,
-    tagIds: undefined,
+    tagIds: [], // Initialize as empty array
     sortBy: 'createdAt',
     sortOrder: 'desc',
   },
@@ -65,25 +61,19 @@ export const fetchTasks = createAsyncThunk(
                             ? filters.priorities.filter(p => p > 0 && p <= 4) 
                             : undefined);
     const validTagIds = params?.tagIds?.filter(id => id > 0) || 
-                       filters.tagIds?.filter(id => id > 0);
+                       (filters.tagIds && filters.tagIds.length > 0
+                        ? filters.tagIds.filter(id => id > 0)
+                        : undefined);
     const validUserId = (params?.userId ?? filters.userId) && (params?.userId ?? filters.userId)! > 0 
                        ? (params?.userId ?? filters.userId) 
                        : undefined;
-    const validTagId = (params?.tagId ?? filters.tagId) && (params?.tagId ?? filters.tagId)! > 0 
-                      ? (params?.tagId ?? filters.tagId) 
-                      : undefined;
-    const validPriority = (params?.priority ?? filters.priority) && (params?.priority ?? filters.priority)! > 0 && (params?.priority ?? filters.priority)! <= 4
-                         ? (params?.priority ?? filters.priority) 
-                         : undefined;
     
     const queryParams: GetTasksParams = {
       page,
       pageSize,
       searchTerm: searchTerm || undefined,
-      priority: validPriority,
       priorities: validPriorities && validPriorities.length > 0 ? validPriorities : undefined,
       userId: validUserId,
-      tagId: validTagId,
       tagIds: validTagIds && validTagIds.length > 0 ? validTagIds : undefined,
       sortBy: params?.sortBy?.trim() || filters.sortBy?.trim() || 'createdAt',
       sortOrder: params?.sortOrder || filters.sortOrder || 'desc',
@@ -135,28 +125,27 @@ const taskSlice = createSlice({
       state.filters.searchTerm = action.payload;
       state.pagination.currentPage = 1; // Reset to first page when searching
     },
-    setPriorityFilter: (state, action: PayloadAction<number | undefined>) => {
-      state.filters.priority = action.payload;
-      state.filters.priorities = undefined; // Clear multiple when setting single
-      state.pagination.currentPage = 1;
-    },
     setPrioritiesFilter: (state, action: PayloadAction<number[] | undefined>) => {
-      state.filters.priorities = action.payload;
-      state.filters.priority = undefined; // Clear single when setting multiple
+      // Always create a new array reference to ensure React detects the change
+      const newPriorities = action.payload && action.payload.length > 0 ? [...action.payload] : [];
+      state.filters = {
+        ...state.filters,
+        priorities: newPriorities, // Always set to array (never undefined)
+      };
       state.pagination.currentPage = 1;
     },
     setUserIdFilter: (state, action: PayloadAction<number | undefined>) => {
       state.filters.userId = action.payload;
       state.pagination.currentPage = 1;
     },
-    setTagIdFilter: (state, action: PayloadAction<number | undefined>) => {
-      state.filters.tagId = action.payload;
-      state.filters.tagIds = undefined; // Clear multiple when setting single
-      state.pagination.currentPage = 1;
-    },
     setTagIdsFilter: (state, action: PayloadAction<number[] | undefined>) => {
-      state.filters.tagIds = action.payload;
-      state.filters.tagId = undefined; // Clear single when setting multiple
+      // Always create a new array reference to ensure React detects the change
+      const newTagIds = action.payload && action.payload.length > 0 ? [...action.payload] : [];
+      // Force Immer to create a new filters object by using spread operator
+      state.filters = {
+        ...state.filters,
+        tagIds: newTagIds, // Always set to array (never undefined)
+      };
       state.pagination.currentPage = 1;
     },
     setSortBy: (state, action: PayloadAction<string>) => {
@@ -166,13 +155,12 @@ const taskSlice = createSlice({
       state.filters.sortOrder = action.payload;
     },
     clearFilters: (state) => {
+      // Always create new array references to ensure React detects the change
       state.filters = {
         searchTerm: undefined,
-        priority: undefined,
-        priorities: undefined,
+        priorities: [], // Reset to empty array (new reference)
         userId: undefined,
-        tagId: undefined,
-        tagIds: undefined,
+        tagIds: [], // Reset to empty array (new reference)
         sortBy: 'createdAt',
         sortOrder: 'desc',
       };
@@ -191,8 +179,8 @@ const taskSlice = createSlice({
         state.tasks = action.payload.items;
         state.pagination.totalItems = action.payload.totalCount;
         state.pagination.totalPages = action.payload.totalPages;
-        state.pagination.currentPage = action.payload.page;
-        state.pagination.itemsPerPage = action.payload.pageSize;
+        // Don't update currentPage/pageSize from response - they come from filters/request
+        // This prevents loops where response updates trigger another fetch
       })
       .addCase(fetchTasks.rejected, (state, action) => {
         state.loading = false;
@@ -259,10 +247,8 @@ export const {
   setCurrentPage, 
   setItemsPerPage,
   setSearchTerm,
-  setPriorityFilter,
   setPrioritiesFilter,
   setUserIdFilter,
-  setTagIdFilter,
   setTagIdsFilter,
   setSortBy,
   setSortOrder,
