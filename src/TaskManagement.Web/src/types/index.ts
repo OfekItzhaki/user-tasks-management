@@ -51,8 +51,15 @@ export interface CreateTaskDto {
   tagIds: number[];
 }
 
-export interface UpdateTaskDto extends CreateTaskDto {
+export interface UpdateTaskDto {
   id: number;
+  title: string;
+  description: string;
+  dueDate: string;
+  priority: Priority;
+  userIds: number[];
+  tagIds: number[];
+  // Note: createdByUserId is NOT included - it cannot be changed after creation
 }
 
 export interface PagedResult<T> {
@@ -61,4 +68,15 @@ export interface PagedResult<T> {
   page: number;
   pageSize: number;
   totalPages: number;
+}
+
+export interface GetTasksParams {
+  page?: number;
+  pageSize?: number;
+  searchTerm?: string;
+  priorities?: number[]; // Multiple priorities only
+  userId?: number;
+  tagIds?: number[]; // Multiple tags only
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
