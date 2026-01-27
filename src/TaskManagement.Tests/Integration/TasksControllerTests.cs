@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using TaskManagement.Application.DTOs;
+using TaskManagement.Application.Queries.Tasks;
 using TaskManagement.Domain.Entities;
 using TaskManagement.Domain.Enums;
 using TaskManagement.Infrastructure.Data;
@@ -18,7 +19,7 @@ public class TasksControllerTests : IClassFixture<WebApplicationFactory<Program>
 {
     private readonly WebApplicationFactory<Program> _factory;
     private readonly HttpClient _client;
-    private TaskManagementDbContext? _context;
+    private readonly TaskManagementDbContext _context;
 
     public TasksControllerTests(WebApplicationFactory<Program> factory)
     {
@@ -45,10 +46,7 @@ public class TasksControllerTests : IClassFixture<WebApplicationFactory<Program>
 
         var scope = _factory.Services.CreateScope();
         _context = scope.ServiceProvider.GetRequiredService<TaskManagementDbContext>();
-        if (_context != null)
-        {
-            SeedDatabase();
-        }
+        SeedDatabase();
     }
 
     private void SeedDatabase()
@@ -86,6 +84,9 @@ public class TasksControllerTests : IClassFixture<WebApplicationFactory<Program>
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await response.Content.ReadFromJsonAsync<PagedResult<TaskDto>>();
+        result.Should().NotBeNull();
+        result!.Items.Should().NotBeNull();
     }
 
     [Fact]
@@ -147,8 +148,8 @@ public class TasksControllerTests : IClassFixture<WebApplicationFactory<Program>
 
     public void Dispose()
     {
-        _context?.Database.EnsureDeleted();
-        _context?.Dispose();
-        _client?.Dispose();
+        _context.Database.EnsureDeleted();
+        _context.Dispose();
+        _client.Dispose();
     }
 }

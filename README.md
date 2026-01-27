@@ -243,6 +243,12 @@ The React app will be available at `http://localhost:5173`
 
 ### 7. Windows Service Setup (Optional)
 
+The Windows Service monitors tasks and sends reminders for overdue tasks via RabbitMQ.
+
+**Queue Name**: `Remainder`
+
+**Log Format**: `"Hi your Task is due {TaskTitle}"`
+
 To run the Windows Service for task reminders:
 
 ```bash
@@ -256,6 +262,11 @@ Or publish and install as a Windows Service:
 dotnet publish -c Release
 # Follow Windows Service installation instructions
 ```
+
+**Note**: The service will:
+- Check for overdue tasks every minute
+- Publish reminders to the "Remainder" queue
+- Subscribe to the queue and log each reminder message
 
 ## Database Schema
 
@@ -418,35 +429,89 @@ dotnet test --filter "FullyQualifiedName~CreateTaskDtoValidatorTests"
 
 ### Tasks with at least 2 tags, sorted by number of tags descending
 
+This SQL query is **implemented as a stored procedure** and executable via the API endpoint: `GET /api/tasks/with-multiple-tags?minTagCount=2`
+
+**Stored Procedure: `GetTasksWithMultipleTags`**
+
 ```sql
--- Tasks with at least 2 tags, sorted by number of tags descending
-SELECT 
-    t.Id,
-    t.Title,
-    t.Description,
-    t.DueDate,
-    t.Priority,
-    COUNT(DISTINCT tt.TagId) AS TagCount,
-    STRING_AGG(tag.Name, ', ') AS TagNames,
-    COUNT(DISTINCT ut.UserId) AS UserCount,
-    STRING_AGG(u.FullName, ', ') AS AssignedUsers
-FROM Tasks t
-INNER JOIN TaskTags tt ON t.Id = tt.TaskId
-INNER JOIN Tags tag ON tt.TagId = tag.Id
-LEFT JOIN UserTasks ut ON t.Id = ut.TaskId
-LEFT JOIN Users u ON ut.UserId = u.Id
-GROUP BY t.Id, t.Title, t.Description, t.DueDate, t.Priority
-HAVING COUNT(DISTINCT tt.TagId) >= 2
-ORDER BY TagCount DESC;
+CREATE PROCEDURE [dbo].[GetTasksWithMultipleTags]
+    @MinTagCount INT = 2
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    SELECT 
+        t.Id,
+        t.Title,
+        t.Description,
+        t.DueDate,
+        t.Priority,
+        COUNT(DISTINCT tt.TagId) AS TagCount,
+        STRING_AGG(tag.Name, ', ') WITHIN GROUP (ORDER BY tag.Name) AS TagNames,
+        COUNT(DISTINCT ut.UserId) AS UserCount,
+        STRING_AGG(u.FullName, ', ') WITHIN GROUP (ORDER BY u.FullName) AS AssignedUsers
+    FROM Tasks t
+    INNER JOIN TaskTags tt ON t.Id = tt.TaskId
+    INNER JOIN Tags tag ON tt.TagId = tag.Id
+    LEFT JOIN UserTasks ut ON t.Id = ut.TaskId
+    LEFT JOIN Users u ON ut.UserId = u.Id
+    GROUP BY t.Id, t.Title, t.Description, t.DueDate, t.Priority
+    HAVING COUNT(DISTINCT tt.TagId) >= @MinTagCount
+    ORDER BY TagCount DESC;
+END
 ```
 
-This query:
+**Implementation:**
+- ✅ **Stored Procedure**: `GetTasksWithMultipleTags` (created via EF Core migration)
+- ✅ **Executed via API**: `GET /api/tasks/with-multiple-tags`
+- ✅ **Query Handler**: `GetTasksWithMultipleTagsQueryHandler` calls the stored procedure
+- ✅ **Configurable**: `minTagCount` parameter (default: 2)
+- ✅ **Swagger Documentation**: Available in Swagger UI with example response
+
+**API Usage:**
+```bash
+# Get tasks with at least 2 tags (default)
+GET /api/tasks/with-multiple-tags
+
+# Get tasks with at least 3 tags
+GET /api/tasks/with-multiple-tags?minTagCount=3
+```
+
+**Response Example:**
+```json
+[
+  {
+    "id": 1,
+    "title": "Task with Multiple Tags",
+    "description": "This task has multiple tags",
+    "dueDate": "2024-12-31T00:00:00Z",
+    "priority": 2,
+    "tagCount": 3,
+    "tagNames": "Urgent, Frontend, Backend",
+    "userCount": 2,
+    "assignedUsers": "John Doe, Jane Smith"
+  }
+]
+```
+
+**Query Details:**
+- **Stored Procedure**: `GetTasksWithMultipleTags` with parameter `@MinTagCount`
 - Joins Tasks with TaskTags, Tags, UserTasks, and Users tables
 - Groups by task properties
-- Filters tasks with 2 or more tags (HAVING clause)
-- Aggregates tag names and assigned users into comma-separated strings
+- Filters tasks with specified minimum number of tags (HAVING clause)
+- Aggregates tag names and assigned users into comma-separated strings using `STRING_AGG` with ordering
+- Sorted by number of tags in descending order
 - Shows both tag count and user count
-- Sorts by tag count in descending order
+- Tag names and user names are sorted alphabetically within each aggregation
+
+**Testing via Swagger:**
+1. Start the API: `cd src/TaskManagement.API && dotnet run`
+2. Navigate to Swagger UI: `https://localhost:7000/swagger` or `http://localhost:5063/swagger`
+3. Find endpoint: `GET /api/tasks/with-multiple-tags`
+4. Click "Try it out"
+5. Enter `minTagCount` (default: 2)
+6. Click "Execute"
+7. View the response with example data
 
 ## Additional Improvements & Future Enhancements
 

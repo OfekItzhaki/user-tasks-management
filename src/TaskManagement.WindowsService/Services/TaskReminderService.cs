@@ -15,7 +15,7 @@ public class TaskReminderService : BackgroundService
     private readonly ILogger<TaskReminderService> _logger;
     private readonly IRabbitMQService _rabbitMQService;
     private readonly TimeSpan _checkInterval = TimeSpan.FromMinutes(1);
-    private const string ReminderQueueName = "TaskReminders";
+    private const string ReminderQueueName = "Remainder";
 
     public TaskReminderService(
         IServiceProvider serviceProvider,
@@ -95,8 +95,8 @@ public class TaskReminderService : BackgroundService
             var reminder = JsonSerializer.Deserialize<ReminderMessage>(message);
             if (reminder != null)
             {
-                _logger.LogInformation("Hi your Task is due {TaskTitle} (Task ID: {TaskId}, Due Date: {DueDate})",
-                    reminder.TaskTitle, reminder.TaskId, reminder.DueDate);
+                _logger.LogInformation("Hi your Task is due {TaskTitle}",
+                    reminder.TaskTitle);
             }
         }
         catch (Exception ex)

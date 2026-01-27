@@ -86,25 +86,26 @@ public class GetTasksQueryHandlerTests : IDisposable
     public async System.Threading.Tasks.Task Handle_ShouldReturnAllTasks()
     {
         var handler = new GetTasksQueryHandler(_context);
-        var query = new GetTasksQuery();
+        var query = new GetTasksQuery { Page = 1, PageSize = 10 };
 
         var result = await handler.Handle(query, CancellationToken.None);
 
         result.Should().NotBeNull();
-        result.Should().HaveCount(2);
-        result.Should().Contain(t => t.Title == "Task 1");
-        result.Should().Contain(t => t.Title == "Task 2");
+        result.Items.Should().HaveCount(2);
+        result.TotalCount.Should().Be(2);
+        result.Items.Should().Contain(t => t.Title == "Task 1");
+        result.Items.Should().Contain(t => t.Title == "Task 2");
     }
 
     [Fact]
     public async System.Threading.Tasks.Task Handle_ShouldIncludeUsersAndTags()
     {
         var handler = new GetTasksQueryHandler(_context);
-        var query = new GetTasksQuery();
+        var query = new GetTasksQuery { Page = 1, PageSize = 10 };
 
         var result = await handler.Handle(query, CancellationToken.None);
 
-        var task1 = result.First(t => t.Id == 1);
+        var task1 = result.Items.First(t => t.Id == 1);
         task1.Users.Should().HaveCount(1);
         task1.Tags.Should().HaveCount(1);
     }
