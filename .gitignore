@@ -93,3 +93,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Instructions folder (team-specific documentation)
+instructions/

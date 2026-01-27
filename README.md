@@ -267,7 +267,7 @@ dotnet publish -c Release
 - `Description` (string, max 1000, required)
 - `DueDate` (datetime, required)
 - `Priority` (int, required) - Enum: Low(1), Medium(2), High(3), Critical(4)
-- `UserId` (int, FK to Users)
+- `CreatedByUserId` (int, FK to Users) - User who created the task
 - `CreatedAt` (datetime)
 - `UpdatedAt` (datetime)
 
@@ -285,13 +285,19 @@ dotnet publish -c Release
 - `Color` (string, max 20, optional)
 - `CreatedAt` (datetime)
 
+#### UserTasks (Junction Table - Many-to-Many)
+- `TaskId` (int, FK to Tasks, PK)
+- `UserId` (int, FK to Users, PK)
+- `Role` (int, required) - Enum: Owner(1), Assignee(2), Watcher(3)
+- `AssignedAt` (datetime, required)
+
 #### TaskTags (Junction Table)
 - `TaskId` (int, FK to Tasks, PK)
 - `TagId` (int, FK to Tags, PK)
 
 ### Entity Relationships
 
-- **Task** → **User**: Many-to-One (Task belongs to one User)
+- **Task** ↔ **User**: Many-to-Many (via UserTasks junction table with roles)
 - **Task** ↔ **Tag**: Many-to-Many (via TaskTags junction table)
 
 ## API Documentation
@@ -413,28 +419,85 @@ dotnet test --filter "FullyQualifiedName~CreateTaskDtoValidatorTests"
 ### Tasks with at least 2 tags, sorted by number of tags descending
 
 ```sql
+-- Tasks with at least 2 tags, sorted by number of tags descending
 SELECT 
     t.Id,
     t.Title,
     t.Description,
     t.DueDate,
     t.Priority,
-    COUNT(tt.TagId) AS TagCount,
-    STRING_AGG(tag.Name, ', ') AS TagNames
+    COUNT(DISTINCT tt.TagId) AS TagCount,
+    STRING_AGG(tag.Name, ', ') AS TagNames,
+    COUNT(DISTINCT ut.UserId) AS UserCount,
+    STRING_AGG(u.FullName, ', ') AS AssignedUsers
 FROM Tasks t
 INNER JOIN TaskTags tt ON t.Id = tt.TaskId
 INNER JOIN Tags tag ON tt.TagId = tag.Id
+LEFT JOIN UserTasks ut ON t.Id = ut.TaskId
+LEFT JOIN Users u ON ut.UserId = u.Id
 GROUP BY t.Id, t.Title, t.Description, t.DueDate, t.Priority
-HAVING COUNT(tt.TagId) >= 2
+HAVING COUNT(DISTINCT tt.TagId) >= 2
 ORDER BY TagCount DESC;
 ```
 
 This query:
-- Joins Tasks with TaskTags and Tags tables
+- Joins Tasks with TaskTags, Tags, UserTasks, and Users tables
 - Groups by task properties
 - Filters tasks with 2 or more tags (HAVING clause)
-- Aggregates tag names into a comma-separated string
+- Aggregates tag names and assigned users into comma-separated strings
+- Shows both tag count and user count
 - Sorts by tag count in descending order
+
+## Additional Improvements & Future Enhancements
+
+The following improvements could enhance the application further:
+
+### High Priority
+1. **Users API Endpoint** - Add `/api/users` endpoint to fetch users dynamically (currently using mock data in frontend)
+2. **Task Status** - Add status field (Not Started, In Progress, Completed, Cancelled) with workflow management
+3. **Pagination** - Implement pagination for tasks list to handle large datasets efficiently
+4. **Search & Filtering** - Add search by title/description and filters by priority, due date, users, tags
+5. **Sorting** - Add sorting options (by due date, priority, creation date, etc.)
+
+### Medium Priority
+6. **Task Comments** - Allow users to add comments/notes to tasks for collaboration
+7. **Task History/Audit Log** - Track changes to tasks (who changed what and when)
+8. **Email Notifications** - Send email notifications for task assignments and due date reminders
+9. **File Attachments** - Allow attaching files to tasks
+10. **Task Templates** - Create reusable task templates for common workflows
+
+### Nice to Have
+11. **Recurring Tasks** - Support for recurring/repeating tasks
+12. **Task Dependencies** - Link tasks that depend on each other
+13. **Export Functionality** - Export tasks to CSV, PDF, or Excel
+14. **Dashboard/Analytics** - Visual dashboard with task statistics and charts
+15. **Real-time Updates** - WebSocket support for real-time task updates
+16. **Mobile App** - Native mobile application
+17. **Task Categories/Projects** - Organize tasks into projects or categories
+18. **Time Tracking** - Track time spent on tasks
+19. **Better Error Handling** - More detailed error messages and user-friendly error pages
+20. **Loading States** - Better loading indicators and skeleton screens
+
+### Technical Improvements
+- Add API versioning
+- Implement caching (Redis) for frequently accessed data
+- Add rate limiting to API endpoints
+- Implement comprehensive logging and monitoring
+- Add health checks endpoint
+- Implement API authentication/authorization (JWT)
+- Add unit test coverage for frontend components
+- Add E2E tests with Playwright or Cypress
+- Implement CI/CD pipeline
+- Add Docker containerization
+- Add database seeding scripts
+- **Backend API enhancements** - Add pagination, search, and sorting parameters to GET /api/tasks endpoint
+- **User Management CRUD** - Full CRUD operations for users (currently only seed data)
+- **Tag Management CRUD** - Full CRUD operations for tags (currently only seed data)
+- **Bulk Operations** - Bulk delete, update, and assign tasks
+- **Security Hardening** - Input sanitization, XSS/CSRF protection
+- **Performance Optimization** - Database indexing strategy, query optimization
+- **Accessibility** - Keyboard navigation, screen reader support, ARIA labels
+- **Internationalization** - Multi-language support
 
 ## Project Structure
 
