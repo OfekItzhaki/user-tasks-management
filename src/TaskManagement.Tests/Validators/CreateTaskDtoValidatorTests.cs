@@ -25,7 +25,8 @@ public class CreateTaskDtoValidatorTests
             Description = "Test Description",
             DueDate = DateTime.Today.AddDays(1),
             Priority = Priority.Medium,
-            UserId = 1,
+            CreatedByUserId = 1,
+            UserIds = new List<int> { 1, 2 },
             TagIds = new List<int> { 1, 2 }
         };
 
@@ -46,7 +47,8 @@ public class CreateTaskDtoValidatorTests
             Description = "Test Description",
             DueDate = DateTime.Today.AddDays(1),
             Priority = Priority.Medium,
-            UserId = 1,
+            CreatedByUserId = 1,
+            UserIds = new List<int> { 1 },
             TagIds = new List<int>()
         };
 
@@ -68,7 +70,8 @@ public class CreateTaskDtoValidatorTests
             Description = "Test Description",
             DueDate = DateTime.Today.AddDays(1),
             Priority = Priority.Medium,
-            UserId = 1,
+            CreatedByUserId = 1,
+            UserIds = new List<int> { 1 },
             TagIds = new List<int>()
         };
 
@@ -90,7 +93,8 @@ public class CreateTaskDtoValidatorTests
             Description = "Test Description",
             DueDate = DateTime.Today.AddDays(-1),
             Priority = Priority.Medium,
-            UserId = 1,
+            CreatedByUserId = 1,
+            UserIds = new List<int> { 1 },
             TagIds = new List<int>()
         };
 
@@ -103,24 +107,42 @@ public class CreateTaskDtoValidatorTests
     }
 
     [Fact]
-    public void Validate_InvalidUserId_ShouldFail()
+    public void Validate_InvalidCreatedByUserId_ShouldFail()
     {
-        // Arrange
         var task = new CreateTaskDto
         {
             Title = "Test Task",
             Description = "Test Description",
             DueDate = DateTime.Today.AddDays(1),
             Priority = Priority.Medium,
-            UserId = 0,
+            CreatedByUserId = 0,
+            UserIds = new List<int> { 1 },
             TagIds = new List<int>()
         };
 
-        // Act
         var result = _validator.Validate(task);
 
-        // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "UserId");
+        result.Errors.Should().Contain(e => e.PropertyName == "CreatedByUserId");
+    }
+
+    [Fact]
+    public void Validate_EmptyUserIds_ShouldFail()
+    {
+        var task = new CreateTaskDto
+        {
+            Title = "Test Task",
+            Description = "Test Description",
+            DueDate = DateTime.Today.AddDays(1),
+            Priority = Priority.Medium,
+            CreatedByUserId = 1,
+            UserIds = new List<int>(),
+            TagIds = new List<int>()
+        };
+
+        var result = _validator.Validate(task);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "UserIds");
     }
 }

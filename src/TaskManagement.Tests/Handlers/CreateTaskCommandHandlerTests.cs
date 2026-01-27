@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using TaskManagement.Application.Commands.Tasks;
@@ -5,6 +6,7 @@ using TaskManagement.Application.DTOs;
 using TaskManagement.Domain.Entities;
 using TaskManagement.Domain.Enums;
 using TaskManagement.Infrastructure.Data;
+using DomainTask = TaskManagement.Domain.Entities.Task;
 using Xunit;
 
 namespace TaskManagement.Tests.Handlers;
@@ -48,7 +50,7 @@ public class CreateTaskCommandHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_ValidCommand_ShouldCreateTask()
+    public async System.Threading.Tasks.Task Handle_ValidCommand_ShouldCreateTask()
     {
         // Arrange
         var handler = new CreateTaskCommandHandler(_context);
@@ -60,7 +62,8 @@ public class CreateTaskCommandHandlerTests : IDisposable
                 Description = "Task Description",
                 DueDate = DateTime.Today.AddDays(1),
                 Priority = Priority.High,
-                UserId = 1,
+                CreatedByUserId = 1,
+                UserIds = new List<int> { 1 },
                 TagIds = new List<int> { 1 }
             }
         };
