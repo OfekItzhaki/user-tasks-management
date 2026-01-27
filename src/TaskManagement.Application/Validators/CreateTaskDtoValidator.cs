@@ -31,7 +31,8 @@ public class CreateTaskDtoValidator : AbstractValidator<CreateTaskDto>
             .Must(ids => ids != null && ids.Count > 0).WithMessage("At least one user must be assigned to the task.");
 
         RuleFor(x => x.TagIds)
-            .NotNull().WithMessage("Tag IDs cannot be null.");
+            .NotNull().WithMessage("Tag IDs cannot be null.")
+            .Must(ids => ids != null && ids.Count > 0).WithMessage("At least one tag must be selected.");
     }
 
     private bool BeTodayOrFuture(DateTime date)

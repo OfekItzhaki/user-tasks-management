@@ -19,7 +19,8 @@ public class UpdateTaskDtoValidator : AbstractValidator<UpdateTaskDto>
             .MaximumLength(1000).WithMessage("Description must not exceed 1000 characters.");
 
         RuleFor(x => x.DueDate)
-            .NotEmpty().WithMessage("Due date is required.");
+            .NotEmpty().WithMessage("Due date is required.")
+            .Must(BeTodayOrFuture).WithMessage("Due date must be today or in the future.");
 
         RuleFor(x => x.Priority)
             .IsInEnum().WithMessage("Priority must be a valid value.");
@@ -29,6 +30,12 @@ public class UpdateTaskDtoValidator : AbstractValidator<UpdateTaskDto>
             .Must(ids => ids != null && ids.Count > 0).WithMessage("At least one user must be assigned to the task.");
 
         RuleFor(x => x.TagIds)
-            .NotNull().WithMessage("Tag IDs cannot be null.");
+            .NotNull().WithMessage("Tag IDs cannot be null.")
+            .Must(ids => ids != null && ids.Count > 0).WithMessage("At least one tag must be selected.");
+    }
+
+    private bool BeTodayOrFuture(DateTime date)
+    {
+        return date.Date >= DateTime.Today;
     }
 }
