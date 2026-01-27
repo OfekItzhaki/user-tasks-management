@@ -12,6 +12,18 @@ export interface User {
   email: string;
 }
 
+export enum UserTaskRole {
+  Owner = 1,
+  Assignee = 2,
+  Watcher = 3
+}
+
+export interface UserTask {
+  user: User;
+  role: UserTaskRole;
+  assignedAt: string;
+}
+
 export interface Tag {
   id: number;
   name: string;
@@ -24,7 +36,8 @@ export interface Task {
   description: string;
   dueDate: string;
   priority: Priority;
-  user: User;
+  createdByUserId: number;
+  users: UserTask[];
   tags: Tag[];
 }
 
@@ -33,7 +46,8 @@ export interface CreateTaskDto {
   description: string;
   dueDate: string;
   priority: Priority;
-  userId: number;
+  createdByUserId: number;
+  userIds: number[];
   tagIds: number[];
 }
 
