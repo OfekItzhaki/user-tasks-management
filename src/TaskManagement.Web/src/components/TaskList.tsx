@@ -75,8 +75,8 @@ export const TaskList: React.FC<TaskListProps> = ({
   };
 
   if (loading) {
-    return (
-      <div className="space-y-4">
+  return (
+    <div className="space-y-4" style={{ position: 'relative', zIndex: 1 }}>
         {[1, 2, 3].map((i) => (
           <Skeleton key={i} className="h-48 w-full" />
         ))}

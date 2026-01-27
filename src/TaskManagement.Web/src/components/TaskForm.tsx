@@ -96,7 +96,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmitHandler)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmitHandler)} className="space-y-6" style={{ position: 'relative', overflow: 'visible' }}>
       <div>
         <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Title *
