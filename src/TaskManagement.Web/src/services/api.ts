@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import type { Task, CreateTaskDto, UpdateTaskDto, Tag } from '../types';
+import type { Task, CreateTaskDto, UpdateTaskDto, Tag, User, PagedResult, GetTasksParams } from '../types';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'https://localhost:7000/api');
@@ -21,8 +21,16 @@ apiClient.interceptors.response.use(
 );
 
 export const taskApi = {
-  getAll: async (): Promise<Task[]> => {
-    const response = await apiClient.get<Task[]>('/tasks');
+  getAll: async (params?: GetTasksParams): Promise<PagedResult<Task>> => {
+    // Convert arrays to query string format
+    const queryParams: any = { ...params };
+    if (params?.priorities && params.priorities.length > 0) {
+      queryParams.priorities = params.priorities;
+    }
+    if (params?.tagIds && params.tagIds.length > 0) {
+      queryParams.tagIds = params.tagIds;
+    }
+    const response = await apiClient.get<PagedResult<Task>>('/tasks', { params: queryParams });
     return response.data;
   },
 
@@ -49,6 +57,13 @@ export const taskApi = {
 export const tagApi = {
   getAll: async (): Promise<Tag[]> => {
     const response = await apiClient.get<Tag[]>('/tags');
+    return response.data;
+  },
+};
+
+export const userApi = {
+  getAll: async (): Promise<User[]> => {
+    const response = await apiClient.get<User[]>('/users');
     return response.data;
   },
 };
