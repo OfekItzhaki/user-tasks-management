@@ -32,6 +32,8 @@ public class TaskReminderService : BackgroundService
         _rabbitMQService.StartConsuming(ReminderQueueName, ProcessReminder);
 
         _logger.LogInformation("Task Reminder Service started.");
+        Console.WriteLine("[SERVICE] Task Reminder Service started and subscribed to 'Remainder' queue");
+        Console.WriteLine($"[SERVICE] Checking for overdue tasks every {_checkInterval.TotalMinutes} minute(s)");
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -79,12 +81,18 @@ public class TaskReminderService : BackgroundService
 
                 _logger.LogInformation("Published reminder for overdue task: {TaskId} - {TaskTitle} to user: {UserName}", 
                     task.Id, task.Title, userTask.User.FullName);
+                Console.WriteLine($"[PUBLISH] Reminder published - Task: {task.Title} (ID: {task.Id}) to {userTask.User.FullName}");
             }
         }
 
         if (overdueTasks.Any())
         {
             _logger.LogInformation("Found and published {Count} overdue task reminders", overdueTasks.Count);
+            Console.WriteLine($"[SUMMARY] Found and published {overdueTasks.Count} overdue task reminder(s)");
+        }
+        else
+        {
+            Console.WriteLine("[CHECK] No overdue tasks found");
         }
     }
 
@@ -95,13 +103,19 @@ public class TaskReminderService : BackgroundService
             var reminder = JsonSerializer.Deserialize<ReminderMessage>(message);
             if (reminder != null)
             {
-                _logger.LogInformation("Hi your Task is due {TaskTitle}",
-                    reminder.TaskTitle);
+                // Log the message in the required format
+                var logMessage = $"Hi your Task is due {reminder.TaskTitle}";
+                _logger.LogInformation(logMessage);
+                
+                // Also write to console for better visibility
+                Console.WriteLine($"[REMINDER] {logMessage}");
+                Console.WriteLine($"         Task ID: {reminder.TaskId}, User: {reminder.UserName}, Due: {reminder.DueDate:yyyy-MM-dd HH:mm:ss}");
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing reminder message: {Message}", message);
+            Console.WriteLine($"[ERROR] Failed to process reminder: {ex.Message}");
         }
     }
 
