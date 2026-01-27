@@ -7,6 +7,11 @@ interface TaskState {
   loading: boolean;
   error: string | null;
   selectedTask: Task | null;
+  pagination: {
+    currentPage: number;
+    itemsPerPage: number;
+    totalItems: number;
+  };
 }
 
 const initialState: TaskState = {
@@ -14,6 +19,11 @@ const initialState: TaskState = {
   loading: false,
   error: null,
   selectedTask: null,
+  pagination: {
+    currentPage: 1,
+    itemsPerPage: 10,
+    totalItems: 0,
+  },
 };
 
 export const fetchTasks = createAsyncThunk('tasks/fetchAll', async () => {
@@ -47,6 +57,13 @@ const taskSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    setCurrentPage: (state, action: PayloadAction<number>) => {
+      state.pagination.currentPage = action.payload;
+    },
+    setItemsPerPage: (state, action: PayloadAction<number>) => {
+      state.pagination.itemsPerPage = action.payload;
+      state.pagination.currentPage = 1; // Reset to first page when changing items per page
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -58,6 +75,7 @@ const taskSlice = createSlice({
       .addCase(fetchTasks.fulfilled, (state, action) => {
         state.loading = false;
         state.tasks = action.payload;
+        state.pagination.totalItems = action.payload.length;
       })
       .addCase(fetchTasks.rejected, (state, action) => {
         state.loading = false;
@@ -118,5 +136,5 @@ const taskSlice = createSlice({
   },
 });
 
-export const { setSelectedTask, clearError } = taskSlice.actions;
+export const { setSelectedTask, clearError, setCurrentPage, setItemsPerPage } = taskSlice.actions;
 export default taskSlice.reducer;

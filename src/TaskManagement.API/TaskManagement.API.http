@@ -1,6 +1,29 @@
-@TaskManagement.API_HostAddress = http://localhost:5063
+@TaskManagement.API_HostAddress = https://localhost:7000
 
-GET {{TaskManagement.API_HostAddress}}/weatherforecast/
+### Get all tasks
+GET {{TaskManagement.API_HostAddress}}/api/tasks
+Accept: application/json
+
+### Get task by ID
+GET {{TaskManagement.API_HostAddress}}/api/tasks/1
+Accept: application/json
+
+### Create task
+POST {{TaskManagement.API_HostAddress}}/api/tasks
+Content-Type: application/json
+
+{
+  "title": "Test Task",
+  "description": "Test Description",
+  "dueDate": "2024-12-31T00:00:00",
+  "priority": 2,
+  "createdByUserId": 1,
+  "userIds": [1],
+  "tagIds": [1]
+}
+
+### Get all tags
+GET {{TaskManagement.API_HostAddress}}/api/tags
 Accept: application/json
 
 ###
