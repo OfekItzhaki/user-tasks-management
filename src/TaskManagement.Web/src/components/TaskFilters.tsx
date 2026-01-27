@@ -1,25 +1,21 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Priority, Tag, User } from '../types';
 import { PrioritySelector } from './PrioritySelector';
 import { TagSelector } from './TagSelector';
 
 interface TaskFiltersProps {
   searchTerm: string;
-  priority: number | undefined;
-  priorities: number[] | undefined; // Multiple priorities
+  priorities: number[] | undefined; // Multiple priorities only
   userId: number | undefined;
-  tagId: number | undefined;
-  tagIds: number[] | undefined; // Multiple tags
+  tagIds: number[] | undefined; // Multiple tags only
   sortBy: string;
   sortOrder: 'asc' | 'desc';
   users: User[];
   tags: Tag[];
   onSearchChange: (value: string) => void;
-  onPriorityChange: (value: number | undefined) => void;
-  onPrioritiesChange: (value: number[] | undefined) => void; // Multiple priorities
+  onPrioritiesChange: (value: number[] | undefined) => void; // Multiple priorities only
   onUserIdChange: (value: number | undefined) => void;
-  onTagIdChange: (value: number | undefined) => void;
-  onTagIdsChange: (value: number[] | undefined) => void; // Multiple tags
+  onTagIdsChange: (value: number[] | undefined) => void; // Multiple tags only
   onSortByChange: (value: string) => void;
   onSortOrderChange: (value: 'asc' | 'desc') => void;
   onClearFilters: () => void;
@@ -27,43 +23,42 @@ interface TaskFiltersProps {
 
 export const TaskFilters: React.FC<TaskFiltersProps> = ({
   searchTerm,
-  priority,
   priorities,
   userId,
-  tagId,
   tagIds,
   sortBy,
   sortOrder,
   users,
   tags,
   onSearchChange,
-  onPriorityChange,
   onPrioritiesChange,
   onUserIdChange,
-  onTagIdChange,
   onTagIdsChange,
   onSortByChange,
   onSortOrderChange,
   onClearFilters,
 }) => {
-  const hasActiveFilters = searchTerm || priority || (priorities && priorities.length > 0) || userId || tagId || (tagIds && tagIds.length > 0);
+  // Check if any filters are active
+  const hasActiveFilters = searchTerm || (priorities && priorities.length > 0) || userId || (tagIds && tagIds.length > 0);
 
   // Convert priorities array to Priority enum array for PrioritySelector
-  const selectedPriorities = priorities && priorities.length > 0 
-    ? priorities.map(p => p as Priority)
-    : priority 
-      ? [priority as Priority]
-      : [];
+  const selectedPriorities = React.useMemo(() => {
+    if (priorities && priorities.length > 0) {
+      return priorities.map(p => p as Priority);
+    }
+    return [];
+  }, [priorities]);
 
   // Convert tagIds array for TagSelector
-  const selectedTagIds = tagIds && tagIds.length > 0 
-    ? tagIds 
-    : tagId 
-      ? [tagId]
-      : [];
+  const selectedTagIds = React.useMemo(() => {
+    if (tagIds && tagIds.length > 0) {
+      return tagIds;
+    }
+    return [];
+  }, [tagIds]);
 
   return (
-    <div className="glass-card p-4 mb-6 space-y-4">
+    <div className="glass-card p-4 mb-6 space-y-4" style={{ position: 'relative', overflow: 'visible', zIndex: 100, isolation: 'isolate' }}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Filters & Search</h3>
         {hasActiveFilters && (
@@ -104,16 +99,12 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
       {/* Filters Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Priority Filter - Multi-select */}
-        <div>
+        <div style={{ position: 'relative', zIndex: 1000, isolation: 'isolate', overflow: 'visible' }}>
           <PrioritySelector
             selectedPriorities={selectedPriorities}
             onChange={(selected) => {
-              if (selected.length > 0) {
-                onPrioritiesChange(selected.map(p => p as number));
-                onPriorityChange(undefined); // Clear single priority
-              } else {
-                onPrioritiesChange(undefined);
-              }
+              const prioritiesAsNumbers = selected.length > 0 ? selected.map(p => p as number) : undefined;
+              onPrioritiesChange(prioritiesAsNumbers);
             }}
             multiple={true}
           />
@@ -140,17 +131,13 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
         </div>
 
         {/* Tag Filter - Multi-select */}
-        <div>
+        <div style={{ position: 'relative', zIndex: 1000, isolation: 'isolate', overflow: 'visible' }}>
           <TagSelector
             tags={tags}
             selectedTagIds={selectedTagIds}
             onChange={(selected) => {
-              if (selected.length > 0) {
-                onTagIdsChange(selected);
-                onTagIdChange(undefined); // Clear single tag
-              } else {
-                onTagIdsChange(undefined);
-              }
+              const valueToSet = selected.length > 0 ? selected : undefined;
+              onTagIdsChange(valueToSet);
             }}
             multiple={true}
           />

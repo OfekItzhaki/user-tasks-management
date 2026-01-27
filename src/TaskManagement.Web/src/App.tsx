@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useAppDispatch, useAppSelector } from './store/hooks';
+import { shallowEqual } from 'react-redux';
 import { 
   fetchTasks, 
   createTask, 
@@ -10,10 +11,8 @@ import {
   setCurrentPage, 
   setItemsPerPage,
   setSearchTerm,
-  setPriorityFilter,
   setPrioritiesFilter,
   setUserIdFilter,
-  setTagIdFilter,
   setTagIdsFilter,
   setSortBy,
   setSortOrder,
@@ -30,9 +29,27 @@ import { CreateTaskDto, UpdateTaskDto, Task } from './types';
 
 function App() {
   const dispatch = useAppDispatch();
-  const { tasks, loading, error, selectedTask, pagination, filters } = useAppSelector((state) => state.tasks);
+  // Select arrays directly to ensure React-Redux detects changes
+  const tasks = useAppSelector((state) => state.tasks.tasks);
+  const loading = useAppSelector((state) => state.tasks.loading);
+  const error = useAppSelector((state) => state.tasks.error);
+  const selectedTask = useAppSelector((state) => state.tasks.selectedTask);
+  const pagination = useAppSelector((state) => state.tasks.pagination);
+  
+  // Select tagIds and priorities directly - ensure they're always arrays
+  const tagIds = useAppSelector((state) => state.tasks.filters.tagIds) ?? [];
+  const priorities = useAppSelector((state) => state.tasks.filters.priorities) ?? [];
+  
+  // Select other filter properties
+  const searchTerm = useAppSelector((state) => state.tasks.filters.searchTerm);
+  const userId = useAppSelector((state) => state.tasks.filters.userId);
+  const sortBy = useAppSelector((state) => state.tasks.filters.sortBy ?? 'createdAt');
+  const sortOrder = useAppSelector((state) => state.tasks.filters.sortOrder ?? 'desc');
+  
   const { tags } = useAppSelector((state) => state.tags);
   const { users } = useAppSelector((state) => state.users);
+  
+  
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [darkMode, setDarkMode] = useState(() => {
@@ -56,9 +73,32 @@ function App() {
   }, [dispatch]);
 
   // Refetch tasks when pagination or filters change
+  // Create stable string keys from arrays - only changes when content changes
+  const tagIdsKey = useMemo(() => {
+    const arr = tagIds || [];
+    const sorted = [...arr].sort((a, b) => a - b);
+    return sorted.join(',');
+  }, [tagIds]);
+  
+  const prioritiesKey = useMemo(() => {
+    const arr = priorities || [];
+    const sorted = [...arr].sort((a, b) => a - b);
+    return sorted.join(',');
+  }, [priorities]);
+  
   useEffect(() => {
     dispatch(fetchTasks());
-  }, [dispatch, pagination.currentPage, pagination.itemsPerPage, filters]);
+  }, [
+    dispatch,
+    pagination.currentPage,
+    pagination.itemsPerPage,
+    searchTerm,
+    userId,
+    sortBy,
+    sortOrder,
+    tagIdsKey, // Sorted and joined - stable reference that only changes when content changes
+    prioritiesKey, // Sorted and joined - stable reference that only changes when content changes
+  ]);
 
   const handleCreateTask = async (data: CreateTaskDto) => {
     try {
@@ -82,7 +122,16 @@ function App() {
   const handleUpdateTask = async (data: CreateTaskDto) => {
     if (!editingTask) return;
     try {
-      const updateData: UpdateTaskDto = { ...data, id: editingTask.id };
+      // Create UpdateTaskDto with all required fields (excluding createdByUserId)
+      const updateData: UpdateTaskDto = {
+        id: editingTask.id,
+        title: data.title,
+        description: data.description,
+        dueDate: data.dueDate,
+        priority: data.priority,
+        userIds: data.userIds || [],
+        tagIds: data.tagIds || [],
+      };
       await dispatch(updateTask(updateData)).unwrap();
       setEditingTask(null);
       setShowForm(false);
@@ -157,9 +206,9 @@ function App() {
           </div>
         )}
 
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24" style={{ position: 'relative', overflow: 'visible' }}>
           {showForm ? (
-            <div className="glass-card p-8 max-w-2xl mx-auto">
+            <div className="glass-card p-8 max-w-2xl mx-auto" style={{ position: 'relative', overflow: 'visible' }}>
               <h2 className="premium-header-section mb-6">{editingTask ? 'Edit Task' : 'Create New Task'}</h2>
               <TaskForm
                 onSubmit={editingTask ? handleUpdateTask : handleCreateTask}
@@ -186,21 +235,17 @@ function App() {
           ) : (
             <>
               <TaskFilters
-                searchTerm={filters.searchTerm || ''}
-                priority={filters.priority}
-                priorities={filters.priorities}
-                userId={filters.userId}
-                tagId={filters.tagId}
-                tagIds={filters.tagIds}
-                sortBy={filters.sortBy || 'createdAt'}
-                sortOrder={filters.sortOrder || 'desc'}
+                searchTerm={searchTerm || ''}
+                priorities={priorities} // Direct array reference
+                userId={userId}
+                tagIds={tagIds} // Direct array reference
+                sortBy={sortBy}
+                sortOrder={sortOrder}
                 users={users}
                 tags={tags}
                 onSearchChange={(value) => dispatch(setSearchTerm(value))}
-                onPriorityChange={(value) => dispatch(setPriorityFilter(value))}
                 onPrioritiesChange={(value) => dispatch(setPrioritiesFilter(value))}
                 onUserIdChange={(value) => dispatch(setUserIdFilter(value))}
-                onTagIdChange={(value) => dispatch(setTagIdFilter(value))}
                 onTagIdsChange={(value) => dispatch(setTagIdsFilter(value))}
                 onSortByChange={(value) => dispatch(setSortBy(value))}
                 onSortOrderChange={(value) => dispatch(setSortOrder(value))}
