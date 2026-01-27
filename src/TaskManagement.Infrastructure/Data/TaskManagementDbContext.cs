@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TaskManagement.Domain.Entities;
 using TaskManagement.Domain.Enums;
+using DomainTask = TaskManagement.Domain.Entities.Task;
 
 namespace TaskManagement.Infrastructure.Data;
 
@@ -11,17 +12,18 @@ public class TaskManagementDbContext : DbContext
     {
     }
 
-    public DbSet<Task> Tasks { get; set; }
+    public DbSet<DomainTask> Tasks { get; set; }
     public DbSet<Tag> Tags { get; set; }
     public DbSet<TaskTag> TaskTags { get; set; }
     public DbSet<User> Users { get; set; }
+    public DbSet<UserTask> UserTasks { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
         // Task configuration
-        modelBuilder.Entity<Task>(entity =>
+        modelBuilder.Entity<DomainTask>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Title)
@@ -35,15 +37,17 @@ public class TaskManagementDbContext : DbContext
             entity.Property(e => e.Priority)
                 .IsRequired()
                 .HasConversion<int>();
+            entity.Property(e => e.CreatedByUserId)
+                .IsRequired();
             entity.Property(e => e.CreatedAt)
                 .IsRequired();
             entity.Property(e => e.UpdatedAt)
                 .IsRequired();
 
-            entity.HasOne(e => e.User)
-                .WithMany(u => u.Tasks)
-                .HasForeignKey(e => e.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasMany(e => e.UserTasks)
+                .WithOne(ut => ut.Task)
+                .HasForeignKey(ut => ut.TaskId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasMany(e => e.TaskTags)
                 .WithOne(tt => tt.Task)
@@ -85,6 +89,29 @@ public class TaskManagementDbContext : DbContext
                 .HasMaxLength(20);
             entity.Property(e => e.CreatedAt)
                 .IsRequired();
+        });
+
+        // UserTask configuration (junction table)
+        modelBuilder.Entity<UserTask>(entity =>
+        {
+            entity.HasKey(e => new { e.TaskId, e.UserId });
+
+            entity.Property(e => e.Role)
+                .IsRequired()
+                .HasConversion<int>();
+
+            entity.Property(e => e.AssignedAt)
+                .IsRequired();
+
+            entity.HasOne(ut => ut.Task)
+                .WithMany(t => t.UserTasks)
+                .HasForeignKey(ut => ut.TaskId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(ut => ut.User)
+                .WithMany(u => u.UserTasks)
+                .HasForeignKey(ut => ut.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // TaskTag configuration (junction table)
