@@ -3,16 +3,13 @@ using TaskManagement.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Add Application and Infrastructure layers
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Add CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
@@ -26,19 +23,23 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// Only use HTTPS redirection if HTTPS port is configured
+var httpsPort = app.Configuration.GetValue<int?>("HTTPS_PORT") ?? 
+                app.Configuration.GetValue<int?>("ASPNETCORE_HTTPS_PORT") ?? 0;
+if (httpsPort > 0)
+{
+    app.UseHttpsRedirection();
+}
 app.UseCors("AllowReactApp");
 app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
 
-// Make Program class accessible for integration testing
 public partial class Program { }
