@@ -22,12 +22,6 @@ public class GetTasksQueryValidator : AbstractValidator<GetTasksQuery>
             .WithMessage("Search term cannot exceed 200 characters.")
             .When(x => !string.IsNullOrWhiteSpace(x.SearchTerm));
 
-        RuleFor(x => x.Priority)
-            .GreaterThan(0)
-            .LessThanOrEqualTo(4)
-            .WithMessage("Priority must be between 1 and 4.")
-            .When(x => x.Priority.HasValue);
-
         RuleFor(x => x.Priorities)
             .Must(priorities => priorities == null || priorities.All(p => p > 0 && p <= 4))
             .WithMessage("All priorities must be between 1 and 4.")
@@ -37,11 +31,6 @@ public class GetTasksQueryValidator : AbstractValidator<GetTasksQuery>
             .GreaterThan(0)
             .WithMessage("User ID must be greater than 0.")
             .When(x => x.UserId.HasValue);
-
-        RuleFor(x => x.TagId)
-            .GreaterThan(0)
-            .WithMessage("Tag ID must be greater than 0.")
-            .When(x => x.TagId.HasValue);
 
         RuleFor(x => x.TagIds)
             .Must(tagIds => tagIds == null || tagIds.All(id => id > 0))

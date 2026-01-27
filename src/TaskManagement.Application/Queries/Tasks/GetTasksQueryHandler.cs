@@ -33,16 +33,11 @@ public class GetTasksQueryHandler : IRequestHandler<GetTasksQuery, PagedResult<T
                 t.Description.ToLower().Contains(searchTerm));
         }
 
-        // Priority filter - support both single and multiple
+        // Priority filter - multiple priorities only
         if (request.Priorities != null && request.Priorities.Count > 0)
         {
             var priorityValues = request.Priorities.Select(p => (Domain.Enums.Priority)p).ToList();
             query = query.Where(t => priorityValues.Contains(t.Priority));
-        }
-        else if (request.Priority.HasValue)
-        {
-            var priorityValue = (Domain.Enums.Priority)request.Priority.Value;
-            query = query.Where(t => t.Priority == priorityValue);
         }
 
         // User filter
@@ -51,14 +46,10 @@ public class GetTasksQueryHandler : IRequestHandler<GetTasksQuery, PagedResult<T
             query = query.Where(t => t.UserTasks.Any(ut => ut.UserId == request.UserId.Value));
         }
 
-        // Tag filter - support both single and multiple
+        // Tag filter - multiple tags only
         if (request.TagIds != null && request.TagIds.Count > 0)
         {
             query = query.Where(t => t.TaskTags.Any(tt => request.TagIds.Contains(tt.TagId)));
-        }
-        else if (request.TagId.HasValue)
-        {
-            query = query.Where(t => t.TaskTags.Any(tt => tt.TagId == request.TagId.Value));
         }
 
         // Get total count before pagination

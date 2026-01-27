@@ -26,10 +26,8 @@ public class TasksController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
         [FromQuery] string? searchTerm = null,
-        [FromQuery] int? priority = null, // Single priority (backward compatibility)
         [FromQuery] List<int>? priorities = null, // Multiple priorities
         [FromQuery] int? userId = null,
-        [FromQuery] int? tagId = null, // Single tag (backward compatibility)
         [FromQuery] List<int>? tagIds = null, // Multiple tags
         [FromQuery] string? sortBy = "createdAt",
         [FromQuery] string? sortOrder = "desc")
@@ -53,14 +51,9 @@ public class TasksController : ControllerBase
             }
 
             // Validate negative IDs
-            if (priority.HasValue && priority.Value < 1)
+            if (priorities != null && priorities.Any(p => p < 1 || p > 4))
             {
-                return BadRequest("Priority must be greater than 0.");
-            }
-
-            if (priorities != null && priorities.Any(p => p < 1))
-            {
-                return BadRequest("All priorities must be greater than 0.");
+                return BadRequest("All priorities must be between 1 and 4.");
             }
 
             if (userId.HasValue && userId.Value < 1)
@@ -68,15 +61,16 @@ public class TasksController : ControllerBase
                 return BadRequest("User ID must be greater than 0.");
             }
 
-            if (tagId.HasValue && tagId.Value < 1)
-            {
-                return BadRequest("Tag ID must be greater than 0.");
-            }
-
             if (tagIds != null && tagIds.Any(id => id < 1))
             {
                 return BadRequest("All tag IDs must be greater than 0.");
             }
+
+            // Log received parameters for debugging (remove in production)
+            _logger.LogDebug("GetTasks called with parameters: Page={Page}, PageSize={PageSize}, TagIds=[{TagIds}], Priorities=[{Priorities}]",
+                page, pageSize,
+                tagIds != null ? string.Join(",", tagIds) : "null",
+                priorities != null ? string.Join(",", priorities) : "null");
 
             // Sanitize string inputs (trim whitespace, handle empty strings)
             var sanitizedSearchTerm = string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm.Trim();
@@ -100,10 +94,8 @@ public class TasksController : ControllerBase
                 Page = page,
                 PageSize = pageSize,
                 SearchTerm = sanitizedSearchTerm,
-                Priority = priority,
                 Priorities = priorities,
                 UserId = userId,
-                TagId = tagId,
                 TagIds = tagIds,
                 SortBy = sanitizedSortBy,
                 SortOrder = sanitizedSortOrder
@@ -144,7 +136,34 @@ public class TasksController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Creates a new task.
+    /// </summary>
+    /// <param name="taskDto">The task data to create</param>
+    /// <returns>The created task</returns>
+    /// <response code="201">Task successfully created</response>
+    /// <response code="400">Bad request (validation error)</response>
+    /// <response code="500">Internal server error</response>
+    /// <remarks>
+    /// Sample request:
+    /// 
+    ///     POST /api/tasks
+    ///     {
+    ///       "title": "New Task",
+    ///       "description": "Task description",
+    ///       "dueDate": "2024-12-31T00:00:00Z",
+    ///       "priority": 2,
+    ///       "createdByUserId": 1,
+    ///       "userIds": [1, 2],
+    ///       "tagIds": [1, 2]
+    ///     }
+    /// 
+    /// Priority values: 1=Low, 2=Medium, 3=High, 4=Critical
+    /// </remarks>
     [HttpPost]
+    [ProducesResponseType(typeof(TaskDto), 201)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(500)]
     public async Task<ActionResult<TaskDto>> CreateTask([FromBody] CreateTaskDto taskDto)
     {
         try
@@ -165,7 +184,37 @@ public class TasksController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Updates an existing task.
+    /// </summary>
+    /// <param name="id">The ID of the task to update (must match the id in the request body)</param>
+    /// <param name="taskDto">The task data to update</param>
+    /// <returns>The updated task</returns>
+    /// <response code="200">Task successfully updated</response>
+    /// <response code="400">Bad request (ID mismatch or validation error)</response>
+    /// <response code="404">Task not found</response>
+    /// <response code="500">Internal server error</response>
+    /// <remarks>
+    /// Sample request:
+    /// 
+    ///     PUT /api/tasks/1
+    ///     {
+    ///       "id": 1,
+    ///       "title": "Updated Task Title",
+    ///       "description": "Updated task description",
+    ///       "dueDate": "2024-12-31T00:00:00Z",
+    ///       "priority": 3,
+    ///       "userIds": [1, 2],
+    ///       "tagIds": [1, 2, 3]
+    ///     }
+    /// 
+    /// Priority values: 1=Low, 2=Medium, 3=High, 4=Critical
+    /// </remarks>
     [HttpPut("{id}")]
+    [ProducesResponseType(typeof(TaskDto), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
     public async Task<ActionResult<TaskDto>> UpdateTask(int id, [FromBody] UpdateTaskDto taskDto)
     {
         try
@@ -196,7 +245,18 @@ public class TasksController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Deletes a task by ID.
+    /// </summary>
+    /// <param name="id">The ID of the task to delete</param>
+    /// <returns>204 No Content if successful, 404 if not found, 500 if error</returns>
+    /// <response code="204">Task successfully deleted</response>
+    /// <response code="404">Task not found</response>
+    /// <response code="500">An error occurred while deleting the task</response>
     [HttpDelete("{id}")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
     public async Task<ActionResult> DeleteTask(int id)
     {
         try

@@ -8,11 +8,9 @@ public class GetTasksQuery : IRequest<PagedResult<TaskDto>>
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 10;
     public string? SearchTerm { get; set; }
-    public int? Priority { get; set; } // Single priority (for backward compatibility)
     public List<int>? Priorities { get; set; } // Multiple priorities
     public int? UserId { get; set; }
     public List<int>? TagIds { get; set; } // Multiple tags
-    public int? TagId { get; set; } // Single tag (for backward compatibility)
     public string? SortBy { get; set; } = "createdAt";
     public string? SortOrder { get; set; } = "desc";
 }
