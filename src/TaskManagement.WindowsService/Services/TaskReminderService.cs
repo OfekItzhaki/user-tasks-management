@@ -29,7 +29,6 @@ public class TaskReminderService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Start consuming reminders
         _rabbitMQService.StartConsuming(ReminderQueueName, ProcessReminder);
 
         _logger.LogInformation("Task Reminder Service started.");
@@ -56,25 +55,31 @@ public class TaskReminderService : BackgroundService
 
         var now = DateTime.UtcNow;
         var overdueTasks = await dbContext.Tasks
-            .Include(t => t.User)
+            .Include(t => t.UserTasks)
+                .ThenInclude(ut => ut.User)
             .Where(t => t.DueDate <= now)
             .ToListAsync(cancellationToken);
 
         foreach (var task in overdueTasks)
         {
-            var reminderMessage = new
+            foreach (var userTask in task.UserTasks)
             {
-                TaskId = task.Id,
-                TaskTitle = task.Title,
-                DueDate = task.DueDate,
-                UserName = task.User.FullName,
-                UserEmail = task.User.Email
-            };
+                var reminderMessage = new
+                {
+                    TaskId = task.Id,
+                    TaskTitle = task.Title,
+                    DueDate = task.DueDate,
+                    UserName = userTask.User.FullName,
+                    UserEmail = userTask.User.Email,
+                    Role = userTask.Role.ToString()
+                };
 
-            var messageJson = JsonSerializer.Serialize(reminderMessage);
-            _rabbitMQService.PublishMessage(ReminderQueueName, messageJson);
+                var messageJson = JsonSerializer.Serialize(reminderMessage);
+                _rabbitMQService.PublishMessage(ReminderQueueName, messageJson);
 
-            _logger.LogInformation("Published reminder for overdue task: {TaskId} - {TaskTitle}", task.Id, task.Title);
+                _logger.LogInformation("Published reminder for overdue task: {TaskId} - {TaskTitle} to user: {UserName}", 
+                    task.Id, task.Title, userTask.User.FullName);
+            }
         }
 
         if (overdueTasks.Any())
