@@ -1,13 +1,6 @@
 @echo off
 REM First Setup - Double-click to run
-REM This batch file runs the PowerShell setup script
-
-echo ========================================
-echo Task Management System - First Setup
-echo ========================================
-echo.
-echo Starting automated setup...
-echo.
+REM This batch file runs the PowerShell setup script which prompts for Docker or Local setup
 
 REM Get the directory where this batch file is located
 set "SCRIPT_DIR=%~dp0"
