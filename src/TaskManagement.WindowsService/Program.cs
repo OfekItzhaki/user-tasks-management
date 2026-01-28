@@ -7,10 +7,8 @@ using TaskManagement.Infrastructure.RabbitMQ;
 using TaskManagement.WindowsService.Services;
 using Microsoft.Extensions.Logging;
 
-var builder = Host.CreateApplicationBuilder(args);
-
-// Configure console logging with better formatting
-var logger = LoggerFactory.Create(loggingBuilder => loggingBuilder
+// Create a temporary logger for RabbitMQ startup check
+var tempLogger = LoggerFactory.Create(loggingBuilder => loggingBuilder
     .AddConsole(options =>
     {
         options.FormatterName = "simple";
@@ -25,9 +23,11 @@ var logger = LoggerFactory.Create(loggingBuilder => loggingBuilder
 // Check if RabbitMQ is running, and try to start it if not
 if (!IsRabbitMQRunning())
 {
-    logger.LogInformation("RabbitMQ is not running. Attempting to start it...");
-    TryStartRabbitMQ(logger);
+    tempLogger.LogInformation("RabbitMQ is not running. Attempting to start it...");
+    TryStartRabbitMQ(tempLogger);
 }
+
+var builder = Host.CreateApplicationBuilder(args);
 
 // Helper function to check if RabbitMQ is running
 static bool IsRabbitMQRunning()
