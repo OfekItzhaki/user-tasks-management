@@ -187,11 +187,11 @@ public class TasksController : ControllerBase
     /// <summary>
     /// Updates an existing task.
     /// </summary>
-    /// <param name="id">The ID of the task to update (must match the id in the request body)</param>
-    /// <param name="taskDto">The task data to update</param>
+    /// <param name="id">The ID of the task to update (from URL path)</param>
+    /// <param name="taskDto">The task data to update (ID is not required in body)</param>
     /// <returns>The updated task</returns>
     /// <response code="200">Task successfully updated</response>
-    /// <response code="400">Bad request (ID mismatch or validation error)</response>
+    /// <response code="400">Bad request (validation error)</response>
     /// <response code="404">Task not found</response>
     /// <response code="500">Internal server error</response>
     /// <remarks>
@@ -199,7 +199,6 @@ public class TasksController : ControllerBase
     /// 
     ///     PUT /api/tasks/1
     ///     {
-    ///       "id": 1,
     ///       "title": "Updated Task Title",
     ///       "description": "Updated task description",
     ///       "dueDate": "2024-12-31T00:00:00Z",
@@ -209,6 +208,7 @@ public class TasksController : ControllerBase
     ///     }
     /// 
     /// Priority values: 1=Low, 2=Medium, 3=High, 4=Critical
+    /// Note: The task ID is provided in the URL path, not in the request body.
     /// </remarks>
     [HttpPut("{id}")]
     [ProducesResponseType(typeof(TaskDto), 200)]
@@ -219,12 +219,7 @@ public class TasksController : ControllerBase
     {
         try
         {
-            if (id != taskDto.Id)
-            {
-                return BadRequest("Task ID mismatch.");
-            }
-
-            var command = new UpdateTaskCommand { Task = taskDto };
+            var command = new UpdateTaskCommand { Id = id, Task = taskDto };
             var updatedTask = await _mediator.Send(command);
             return Ok(updatedTask);
         }

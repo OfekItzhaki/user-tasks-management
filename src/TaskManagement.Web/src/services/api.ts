@@ -53,8 +53,8 @@ export const taskApi = {
     return response.data;
   },
 
-  update: async (task: UpdateTaskDto): Promise<Task> => {
-    const response = await apiClient.put<Task>(`/tasks/${task.id}`, task);
+  update: async (id: number, task: UpdateTaskDto): Promise<Task> => {
+    const response = await apiClient.put<Task>(`/tasks/${id}`, task);
     return response.data;
   },
 

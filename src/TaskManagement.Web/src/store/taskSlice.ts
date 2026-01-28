@@ -88,8 +88,8 @@ export const createTask = createAsyncThunk('tasks/create', async (task: CreateTa
   return await taskApi.create(task);
 });
 
-export const updateTask = createAsyncThunk('tasks/update', async (task: UpdateTaskDto) => {
-  return await taskApi.update(task);
+export const updateTask = createAsyncThunk('tasks/update', async ({ id, task }: { id: number; task: UpdateTaskDto }) => {
+  return await taskApi.update(id, task);
 });
 
 export const deleteTask = createAsyncThunk('tasks/delete', async (id: number) => {

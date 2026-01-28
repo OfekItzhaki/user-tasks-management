@@ -5,16 +5,10 @@ namespace TaskManagement.Application.DTOs;
 
 /// <summary>
 /// Data transfer object for updating a task.
+/// Note: The task ID is provided in the URL path, not in the request body.
 /// </summary>
 public class UpdateTaskDto
 {
-    /// <summary>
-    /// The ID of the task to update (must match the ID in the URL path).
-    /// </summary>
-    /// <example>1</example>
-    [Required]
-    public int Id { get; set; }
-
     /// <summary>
     /// The title of the task (max 200 characters).
     /// </summary>

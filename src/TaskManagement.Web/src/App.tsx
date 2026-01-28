@@ -104,7 +104,6 @@ function App() {
     if (!editingTask) return;
     try {
       const updateData: UpdateTaskDto = {
-        id: editingTask.id,
         title: data.title,
         description: data.description,
         dueDate: data.dueDate,
@@ -112,7 +111,7 @@ function App() {
         userIds: data.userIds || [],
         tagIds: data.tagIds || [],
       };
-      await dispatch(updateTask(updateData)).unwrap();
+      await dispatch(updateTask({ id: editingTask.id, task: updateData })).unwrap();
       setEditingTask(null);
       setShowForm(false);
       dispatch(fetchTasks());

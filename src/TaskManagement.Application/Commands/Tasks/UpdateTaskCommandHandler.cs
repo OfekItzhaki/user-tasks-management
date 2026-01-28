@@ -22,11 +22,11 @@ public class UpdateTaskCommandHandler : IRequestHandler<UpdateTaskCommand, TaskD
                 .ThenInclude(ut => ut.User)
             .Include(t => t.TaskTags)
                 .ThenInclude(tt => tt.Tag)
-            .FirstOrDefaultAsync(t => t.Id == request.Task.Id, cancellationToken);
+            .FirstOrDefaultAsync(t => t.Id == request.Id, cancellationToken);
 
         if (task == null)
         {
-            throw new KeyNotFoundException($"Task with ID {request.Task.Id} not found.");
+            throw new KeyNotFoundException($"Task with ID {request.Id} not found.");
         }
 
         task.Title = request.Task.Title;

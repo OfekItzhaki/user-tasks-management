@@ -52,7 +52,6 @@ export interface CreateTaskDto {
 }
 
 export interface UpdateTaskDto {
-  id: number;
   title: string;
   description: string;
   dueDate: string;
