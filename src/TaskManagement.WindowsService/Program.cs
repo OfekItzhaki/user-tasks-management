@@ -13,13 +13,46 @@ static bool IsRabbitMQRunning()
     try
     {
         using var tcpClient = new TcpClient();
-        tcpClient.Connect("localhost", 5672);
-        return true;
+        var connectTask = tcpClient.ConnectAsync("localhost", 5672);
+        if (connectTask.Wait(TimeSpan.FromSeconds(2)))
+        {
+            return tcpClient.Connected;
+        }
+        return false;
     }
     catch
     {
         return false;
     }
+}
+
+// Helper function to wait for RabbitMQ to be ready (accepting connections on port 5672)
+static bool WaitForRabbitMQReady(ILogger logger, int maxWaitSeconds = 60)
+{
+    logger.LogInformation("Waiting for RabbitMQ to be ready on localhost:5672...");
+    int waited = 0;
+    int checkInterval = 2; // Check every 2 seconds
+    
+    while (waited < maxWaitSeconds)
+    {
+        if (IsRabbitMQRunning())
+        {
+            logger.LogInformation("RabbitMQ is ready (waited {Waited} seconds)", waited);
+            return true;
+        }
+        
+        System.Threading.Thread.Sleep(checkInterval * 1000);
+        waited += checkInterval;
+        
+        // Log progress every 10 seconds
+        if (waited % 10 == 0)
+        {
+            logger.LogInformation("Still waiting for RabbitMQ... ({Waited}/{MaxWaitSeconds} seconds)", waited, maxWaitSeconds);
+        }
+    }
+    
+    logger.LogWarning("RabbitMQ did not become ready within {MaxWaitSeconds} seconds", maxWaitSeconds);
+    return false;
 }
 
 // Helper function to check if SQL Server is running
@@ -28,13 +61,46 @@ static bool IsSqlServerRunning()
     try
     {
         using var tcpClient = new TcpClient();
-        tcpClient.Connect("localhost", 1433);
-        return true;
+        var connectTask = tcpClient.ConnectAsync("localhost", 1433);
+        if (connectTask.Wait(TimeSpan.FromSeconds(2)))
+        {
+            return tcpClient.Connected;
+        }
+        return false;
     }
     catch
     {
         return false;
     }
+}
+
+// Helper function to wait for SQL Server to be ready (accepting connections on port 1433)
+static bool WaitForSqlServerReady(ILogger logger, int maxWaitSeconds = 60)
+{
+    logger.LogInformation("Waiting for SQL Server to be ready on localhost:1433...");
+    int waited = 0;
+    int checkInterval = 2; // Check every 2 seconds
+    
+    while (waited < maxWaitSeconds)
+    {
+        if (IsSqlServerRunning())
+        {
+            logger.LogInformation("SQL Server is ready (waited {Waited} seconds)", waited);
+            return true;
+        }
+        
+        System.Threading.Thread.Sleep(checkInterval * 1000);
+        waited += checkInterval;
+        
+        // Log progress every 10 seconds
+        if (waited % 10 == 0)
+        {
+            logger.LogInformation("Still waiting for SQL Server... ({Waited}/{MaxWaitSeconds} seconds)", waited, maxWaitSeconds);
+        }
+    }
+    
+    logger.LogWarning("SQL Server did not become ready within {MaxWaitSeconds} seconds", maxWaitSeconds);
+    return false;
 }
 
 // Helper function to check if Docker is running
@@ -170,8 +236,68 @@ static void TryStartRabbitMQ(ILogger logger)
                     if (process.ExitCode == 0)
                     {
                         logger.LogInformation("RabbitMQ container started successfully");
-                        // Give RabbitMQ a moment to initialize
-                        System.Threading.Thread.Sleep(3000);
+                        
+                        // Check Docker container health status
+                        var healthCheckInfo = new ProcessStartInfo
+                        {
+                            FileName = "docker",
+                            Arguments = "inspect --format='{{.State.Health.Status}}' taskmanagement-rabbitmq",
+                            UseShellExecute = false,
+                            RedirectStandardOutput = true,
+                            RedirectStandardError = true,
+                            CreateNoWindow = true
+                        };
+                        
+                        // Wait for container to be healthy (up to 60 seconds)
+                        int healthWaitSeconds = 60;
+                        int healthWaited = 0;
+                        int healthCheckInterval = 2;
+                        bool isHealthy = false;
+                        
+                        while (healthWaited < healthWaitSeconds && !isHealthy)
+                        {
+                            System.Threading.Thread.Sleep(healthCheckInterval * 1000);
+                            healthWaited += healthCheckInterval;
+                            
+                            try
+                            {
+                                using var healthProcess = Process.Start(healthCheckInfo);
+                                if (healthProcess != null)
+                                {
+                                    healthProcess.WaitForExit(2000);
+                                    var healthStatus = healthProcess.StandardOutput.ReadToEnd().Trim();
+                                    
+                                    if (healthStatus == "healthy")
+                                    {
+                                        logger.LogInformation("RabbitMQ container is healthy");
+                                        isHealthy = true;
+                                        break;
+                                    }
+                                    else if (healthStatus == "unhealthy")
+                                    {
+                                        logger.LogWarning("RabbitMQ container is unhealthy. Waiting for it to recover...");
+                                    }
+                                    // If status is "starting" or empty, continue waiting
+                                }
+                            }
+                            catch
+                            {
+                                // Health check failed, continue waiting
+                            }
+                            
+                            if (healthWaited % 10 == 0)
+                            {
+                                logger.LogInformation("Waiting for RabbitMQ container to be healthy... ({HealthWaited}/{HealthWaitSeconds} seconds)", healthWaited, healthWaitSeconds);
+                            }
+                        }
+                        
+                        if (!isHealthy)
+                        {
+                            logger.LogWarning("RabbitMQ container did not become healthy within {HealthWaitSeconds} seconds, but will continue waiting for TCP connection", healthWaitSeconds);
+                        }
+                        
+                        // Now wait for TCP port to be ready (this is the actual readiness check)
+                        // This will be handled by WaitForRabbitMQReady() after TryStartRabbitMQ returns
                         return;
                     }
                     else
@@ -205,8 +331,68 @@ static void TryStartRabbitMQ(ILogger logger)
                     
                     if (process2.ExitCode == 0)
                     {
-                        logger.LogInformation("RabbitMQ container started successfully");
-                        System.Threading.Thread.Sleep(3000);
+                        logger.LogInformation("RabbitMQ container started successfully (using docker-compose)");
+                        
+                        // Check Docker container health status
+                        var healthCheckInfo = new ProcessStartInfo
+                        {
+                            FileName = "docker",
+                            Arguments = "inspect --format='{{.State.Health.Status}}' taskmanagement-rabbitmq",
+                            UseShellExecute = false,
+                            RedirectStandardOutput = true,
+                            RedirectStandardError = true,
+                            CreateNoWindow = true
+                        };
+                        
+                        // Wait for container to be healthy (up to 60 seconds)
+                        int healthWaitSeconds = 60;
+                        int healthWaited = 0;
+                        int healthCheckInterval = 2;
+                        bool isHealthy = false;
+                        
+                        while (healthWaited < healthWaitSeconds && !isHealthy)
+                        {
+                            System.Threading.Thread.Sleep(healthCheckInterval * 1000);
+                            healthWaited += healthCheckInterval;
+                            
+                            try
+                            {
+                                using var healthProcess = Process.Start(healthCheckInfo);
+                                if (healthProcess != null)
+                                {
+                                    healthProcess.WaitForExit(2000);
+                                    var healthStatus = healthProcess.StandardOutput.ReadToEnd().Trim();
+                                    
+                                    if (healthStatus == "healthy")
+                                    {
+                                        logger.LogInformation("RabbitMQ container is healthy");
+                                        isHealthy = true;
+                                        break;
+                                    }
+                                    else if (healthStatus == "unhealthy")
+                                    {
+                                        logger.LogWarning("RabbitMQ container is unhealthy. Waiting for it to recover...");
+                                    }
+                                    // If status is "starting" or empty, continue waiting
+                                }
+                            }
+                            catch
+                            {
+                                // Health check failed, continue waiting
+                            }
+                            
+                            if (healthWaited % 10 == 0)
+                            {
+                                logger.LogInformation("Waiting for RabbitMQ container to be healthy... ({HealthWaited}/{HealthWaitSeconds} seconds)", healthWaited, healthWaitSeconds);
+                            }
+                        }
+                        
+                        if (!isHealthy)
+                        {
+                            logger.LogWarning("RabbitMQ container did not become healthy within {HealthWaitSeconds} seconds, but will continue waiting for TCP connection", healthWaitSeconds);
+                        }
+                        
+                        // Now wait for TCP port to be ready (this will be handled by WaitForRabbitMQReady() after TryStartRabbitMQ returns)
                         return;
                     }
                     else
@@ -246,12 +432,22 @@ var tempLogger = LoggerFactory.Create(loggingBuilder => loggingBuilder
         options.ColorBehavior = Microsoft.Extensions.Logging.Console.LoggerColorBehavior.Enabled;
     })).CreateLogger("Program");
 
-// Check if SQL Server is running (critical dependency)
+// Check if SQL Server is running (critical dependency) and wait for it to be ready
 if (!IsSqlServerRunning())
 {
-    tempLogger.LogWarning("SQL Server is not accessible on localhost:1433. The service may not function correctly.");
+    tempLogger.LogWarning("SQL Server is not accessible on localhost:1433. Waiting for it to become ready...");
     tempLogger.LogWarning("Please ensure SQL Server Docker container is running: docker compose -f docker/docker-compose.yml up -d sqlserver");
     tempLogger.LogWarning("Or if using LocalDB, ensure it's started: sqllocaldb start mssqllocaldb");
+    
+    // Wait for SQL Server to be ready (critical - service needs database)
+    if (!WaitForSqlServerReady(tempLogger, maxWaitSeconds: 60))
+    {
+        tempLogger.LogError("SQL Server did not become ready. Service may not function correctly.");
+    }
+}
+else
+{
+    tempLogger.LogInformation("SQL Server is accessible");
 }
 
 // Check if RabbitMQ is running, and try to start it if not
@@ -259,6 +455,16 @@ if (!IsRabbitMQRunning())
 {
     tempLogger.LogInformation("RabbitMQ is not running. Attempting to start it...");
     TryStartRabbitMQ(tempLogger);
+    
+    // Wait for RabbitMQ to be ready after starting
+    if (!WaitForRabbitMQReady(tempLogger, maxWaitSeconds: 60))
+    {
+        tempLogger.LogWarning("RabbitMQ did not become ready. Service will continue but reminders won't be processed.");
+    }
+}
+else
+{
+    tempLogger.LogInformation("RabbitMQ is accessible");
 }
 
 var builder = Host.CreateApplicationBuilder(args);

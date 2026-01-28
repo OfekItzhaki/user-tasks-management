@@ -30,18 +30,37 @@ public class RabbitMQService : IRabbitMQService, IDisposable
 
     private void TryConnect()
     {
-        try
+        const int maxRetries = 5;
+        int[] retryDelays = { 2000, 4000, 8000, 16000, 0 }; // Last delay is 0 (no wait after final attempt)
+        
+        for (int attempt = 0; attempt < maxRetries; attempt++)
         {
-            var factory = new ConnectionFactory { HostName = _hostName };
-            _connection = factory.CreateConnection();
-            _channel = _connection.CreateModel();
-            _isConnected = true;
-            _logger.LogInformation("Successfully connected to RabbitMQ at {HostName}", _hostName);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to connect to RabbitMQ at {HostName}. Service will continue but reminders won't be processed. Start RabbitMQ with: docker compose -f docker/docker-compose.yml up -d rabbitmq", _hostName);
-            _isConnected = false;
+            try
+            {
+                var factory = new ConnectionFactory { HostName = _hostName };
+                _connection = factory.CreateConnection();
+                _channel = _connection.CreateModel();
+                _isConnected = true;
+                _logger.LogInformation("Successfully connected to RabbitMQ at {HostName} (attempt {Attempt}/{MaxRetries})", _hostName, attempt + 1, maxRetries);
+                return; // Success - exit retry loop
+            }
+            catch (Exception ex)
+            {
+                if (attempt < maxRetries - 1)
+                {
+                    int delay = retryDelays[attempt];
+                    _logger.LogWarning("Failed to connect to RabbitMQ at {HostName} (attempt {Attempt}/{MaxRetries}). Retrying in {Delay}ms... Error: {Error}", 
+                        _hostName, attempt + 1, maxRetries, delay, ex.Message);
+                    System.Threading.Thread.Sleep(delay);
+                }
+                else
+                {
+                    // Final attempt failed
+                    _logger.LogWarning(ex, "Failed to connect to RabbitMQ at {HostName} after {MaxRetries} attempts. Service will continue but reminders won't be processed. Start RabbitMQ with: docker compose -f docker/docker-compose.yml up -d rabbitmq", 
+                        _hostName, maxRetries);
+                    _isConnected = false;
+                }
+            }
         }
     }
 
