@@ -62,6 +62,8 @@ public class TaskReminderService : BackgroundService
         try
         {
             var now = DateTime.UtcNow;
+            _logger.LogDebug("Checking for overdue tasks (current time: {Now})", now);
+            
             var overdueTasks = await dbContext.Tasks
                 .Include(t => t.UserTasks)
                     .ThenInclude(ut => ut.User)
@@ -92,7 +94,12 @@ public class TaskReminderService : BackgroundService
 
             if (overdueTasks.Any())
             {
-                _logger.LogInformation("Found and published {Count} overdue task reminders", overdueTasks.Count);
+                _logger.LogInformation("Found and published {Count} overdue task reminder(s)", overdueTasks.Count);
+            }
+            else
+            {
+                _logger.LogInformation("Checked for overdue tasks. No overdue tasks found (checked {TaskCount} total tasks)", 
+                    await dbContext.Tasks.CountAsync(cancellationToken));
             }
         }
             catch (Microsoft.Data.SqlClient.SqlException sqlEx)
