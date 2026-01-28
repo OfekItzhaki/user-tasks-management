@@ -29,22 +29,22 @@ $missingPrerequisites = @()
 
 # Check .NET SDK
 if (-not (Test-Command "dotnet")) {
-    Write-Host "✗ .NET SDK not found" -ForegroundColor Red
+    Write-Host "[X] .NET SDK not found" -ForegroundColor Red
     $prerequisitesOk = $false
     $missingPrerequisites += ".NET 8.0 SDK (https://dotnet.microsoft.com/download)"
 } else {
     $version = dotnet --version
-    Write-Host "✓ .NET SDK: $version" -ForegroundColor Green
+    Write-Host "[OK] .NET SDK: $version" -ForegroundColor Green
 }
 
 # Check Node.js
 if (-not (Test-Command "node")) {
-    Write-Host "✗ Node.js not found" -ForegroundColor Red
+    Write-Host "[X] Node.js not found" -ForegroundColor Red
     $prerequisitesOk = $false
     $missingPrerequisites += "Node.js 20.19+ or 22.12+ (https://nodejs.org/)"
 } else {
     $version = node --version
-    Write-Host "✓ Node.js: $version" -ForegroundColor Green
+    Write-Host "[OK] Node.js: $version" -ForegroundColor Green
 }
 
 # Check SQL Server LocalDB
@@ -52,7 +52,7 @@ $localdbFound = $false
 try {
     $localdbInfo = sqllocaldb info mssqllocaldb 2>&1
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "✓ SQL Server LocalDB: Available" -ForegroundColor Green
+        Write-Host "[OK] SQL Server LocalDB: Available" -ForegroundColor Green
         $localdbFound = $true
         # Start LocalDB if not running
         sqllocaldb start mssqllocaldb 2>&1 | Out-Null
@@ -65,7 +65,7 @@ try {
     )
     foreach ($path in $localdbPaths) {
         if (Test-Path $path) {
-            Write-Host "✓ SQL Server LocalDB: Found at $path" -ForegroundColor Green
+            Write-Host "[OK] SQL Server LocalDB: Found at $path" -ForegroundColor Green
             $localdbFound = $true
             break
         }
@@ -73,7 +73,7 @@ try {
 }
 
 if (-not $localdbFound) {
-    Write-Host "⚠ SQL Server LocalDB: Not found" -ForegroundColor Yellow
+    Write-Host "[!] SQL Server LocalDB: Not found" -ForegroundColor Yellow
     Write-Host "  LocalDB usually comes with Visual Studio" -ForegroundColor Gray
     Write-Host "  Or install SQL Server Express: https://www.microsoft.com/sql-server/sql-server-downloads" -ForegroundColor Gray
     Write-Host "  Continuing anyway (will try to use connection string)" -ForegroundColor Yellow
@@ -101,11 +101,11 @@ $setupScript = Join-Path $PSScriptRoot "..\setup.ps1"
 if (Test-Path $setupScript) {
     & $setupScript
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "✗ Setup script failed" -ForegroundColor Red
+        Write-Host "[X] Setup script failed" -ForegroundColor Red
         exit 1
     }
 } else {
-    Write-Host "✗ Setup script not found: $setupScript" -ForegroundColor Red
+    Write-Host "[X] Setup script not found: $setupScript" -ForegroundColor Red
     exit 1
 }
 
@@ -121,7 +121,7 @@ $startScript = Join-Path $PSScriptRoot "..\start-all.ps1"
 if (Test-Path $startScript) {
     & $startScript
 } else {
-    Write-Host "✗ Start script not found: $startScript" -ForegroundColor Red
+    Write-Host "[X] Start script not found: $startScript" -ForegroundColor Red
     exit 1
 }
 
@@ -138,9 +138,9 @@ $dotnetVersion = dotnet --version
 $nodeVersion = node --version
 $npmVersion = npm --version
 
-Write-Host "  ✓ .NET SDK: $dotnetVersion" -ForegroundColor Green
-Write-Host "  ✓ Node.js: $nodeVersion" -ForegroundColor Green
-Write-Host "  ✓ npm: $npmVersion" -ForegroundColor Green
+Write-Host "  [OK] .NET SDK: $dotnetVersion" -ForegroundColor Green
+Write-Host "  [OK] Node.js: $nodeVersion" -ForegroundColor Green
+Write-Host "  [OK] npm: $npmVersion" -ForegroundColor Green
 
 Write-Host ""
 Write-Host "Verifying database setup..." -ForegroundColor Yellow
@@ -150,12 +150,12 @@ try {
     # Check if migrations are applied
     dotnet ef migrations list --project ..\TaskManagement.Infrastructure 2>&1 | Out-Null
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "  ✓ Database migrations verified" -ForegroundColor Green
+        Write-Host "  [OK] Database migrations verified" -ForegroundColor Green
     } else {
-        Write-Host "  ⚠ Database migrations may need to be applied" -ForegroundColor Yellow
+        Write-Host "  [!] Database migrations may need to be applied" -ForegroundColor Yellow
     }
 } catch {
-    Write-Host "  ⚠ Could not verify database migrations" -ForegroundColor Yellow
+    Write-Host "  [!] Could not verify database migrations" -ForegroundColor Yellow
 }
 Pop-Location
 
@@ -163,9 +163,9 @@ Write-Host ""
 Write-Host "Verifying frontend dependencies..." -ForegroundColor Yellow
 $webPath = Join-Path $PSScriptRoot "..\..\src\TaskManagement.Web"
 if (Test-Path (Join-Path $webPath "node_modules")) {
-    Write-Host "  ✓ Frontend dependencies installed" -ForegroundColor Green
+    Write-Host "  [OK] Frontend dependencies installed" -ForegroundColor Green
 } else {
-    Write-Host "  ⚠ Frontend dependencies not found" -ForegroundColor Yellow
+    Write-Host "  [!] Frontend dependencies not found" -ForegroundColor Yellow
 }
 
 Write-Host ""
@@ -192,7 +192,7 @@ if ($seedChoice -eq "y" -or $seedChoice -eq "Y") {
             $response = Invoke-WebRequest -Uri "http://localhost:5063/api/seed" -Method POST -TimeoutSec 2 -ErrorAction SilentlyContinue
             if ($response.StatusCode -eq 200) {
                 $apiReady = $true
-                Write-Host "  ✓ Database seeded successfully!" -ForegroundColor Green
+                Write-Host "  [OK] Database seeded successfully!" -ForegroundColor Green
             }
         } catch {
             Start-Sleep -Seconds 2
@@ -203,7 +203,7 @@ if ($seedChoice -eq "y" -or $seedChoice -eq "Y") {
     
     if (-not $apiReady) {
         Write-Host ""
-        Write-Host "  ⚠ Could not seed database automatically" -ForegroundColor Yellow
+        Write-Host "  [!] Could not seed database automatically" -ForegroundColor Yellow
         Write-Host "  You can seed it manually after the API starts:" -ForegroundColor Gray
         Write-Host "    POST http://localhost:5063/api/seed" -ForegroundColor Cyan
         Write-Host "    Or use Swagger UI: http://localhost:5063/swagger" -ForegroundColor Cyan

@@ -11,7 +11,7 @@ Write-Host ""
 
 # Check if we're in the right directory
 if (-not (Test-Path "src\TaskManagement.API")) {
-    Write-Host "✗ Please run this script from the project root directory" -ForegroundColor Red
+    Write-Host "[X] Please run this script from the project root directory" -ForegroundColor Red
     exit 1
 }
 
@@ -40,14 +40,14 @@ if ($service) {
     Write-Host ""
     Write-Host "Windows Service Status:" -ForegroundColor Cyan
     if ($service.Status -eq 'Running') {
-        Write-Host "  ✓ Windows Service is running (Production Mode)" -ForegroundColor Green
+        Write-Host "  [OK] Windows Service is running (Production Mode)" -ForegroundColor Green
         Write-Host "  View logs: eventvwr.msc > Windows Logs > Application" -ForegroundColor Gray
     } else {
-        Write-Host "  ⚠ Windows Service exists but is not running" -ForegroundColor Yellow
+        Write-Host "  [!] Windows Service exists but is not running" -ForegroundColor Yellow
         $startService = Read-Host "Start the Windows Service? (y/n)"
         if ($startService -eq "y" -or $startService -eq "Y") {
             Start-Service -Name $serviceName
-            Write-Host "  ✓ Windows Service started" -ForegroundColor Green
+            Write-Host "  [OK] Windows Service started" -ForegroundColor Green
         } else {
             Write-Host "Starting in Development Mode (Console)..." -ForegroundColor Yellow
             Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD\src\TaskManagement.WindowsService'; Write-Host 'Windows Service (Development Mode)' -ForegroundColor Cyan; dotnet run" -WindowStyle Normal

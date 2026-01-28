@@ -35,10 +35,10 @@ function Wait-ForService {
     }
     Write-Host ""
     if (Test-Port -Port $Port) {
-        Write-Host "✓ $ServiceName is ready!" -ForegroundColor Green
+        Write-Host "[OK] $ServiceName is ready!" -ForegroundColor Green
         return $true
     } else {
-        Write-Host "✗ $ServiceName failed to start within $MaxWaitSeconds seconds" -ForegroundColor Red
+        Write-Host "[X] $ServiceName failed to start within $MaxWaitSeconds seconds" -ForegroundColor Red
         return $false
     }
 }
@@ -50,18 +50,18 @@ Write-Host ""
 # Check .NET SDK
 try {
     $dotnetVersion = dotnet --version
-    Write-Host "✓ .NET SDK: $dotnetVersion" -ForegroundColor Green
+    Write-Host "[OK] .NET SDK: $dotnetVersion" -ForegroundColor Green
 } catch {
-    Write-Host "✗ .NET SDK not found. Please install .NET 8.0 SDK" -ForegroundColor Red
+    Write-Host "[X] .NET SDK not found. Please install .NET 8.0 SDK" -ForegroundColor Red
     exit 1
 }
 
 # Check Node.js
 try {
     $nodeVersion = node --version
-    Write-Host "✓ Node.js: $nodeVersion" -ForegroundColor Green
+    Write-Host "[OK] Node.js: $nodeVersion" -ForegroundColor Green
 } catch {
-    Write-Host "✗ Node.js not found. Please install Node.js 20.19+ or 22.12+" -ForegroundColor Red
+    Write-Host "[X] Node.js not found. Please install Node.js 20.19+ or 22.12+" -ForegroundColor Red
     exit 1
 }
 
@@ -69,22 +69,22 @@ try {
 try {
     $localdbInfo = sqllocaldb info mssqllocaldb 2>&1
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "✓ SQL Server LocalDB: Available" -ForegroundColor Green
+        Write-Host "[OK] SQL Server LocalDB: Available" -ForegroundColor Green
         # Start LocalDB if not running
         sqllocaldb start mssqllocaldb 2>&1 | Out-Null
     } else {
-        Write-Host "⚠ SQL Server LocalDB: Not found (will try to continue)" -ForegroundColor Yellow
+        Write-Host "[!] SQL Server LocalDB: Not found (will try to continue)" -ForegroundColor Yellow
     }
 } catch {
-    Write-Host "⚠ SQL Server LocalDB: Could not check (will try to continue)" -ForegroundColor Yellow
+    Write-Host "[!] SQL Server LocalDB: Could not check (will try to continue)" -ForegroundColor Yellow
 }
 
 # Check RabbitMQ (optional)
 $rabbitmqRunning = Test-Port -Port 5672
 if ($rabbitmqRunning) {
-    Write-Host "✓ RabbitMQ: Running on port 5672" -ForegroundColor Green
+    Write-Host "[OK] RabbitMQ: Running on port 5672" -ForegroundColor Green
 } else {
-    Write-Host "⚠ RabbitMQ: Not running (Windows Service will work but won't process reminders)" -ForegroundColor Yellow
+    Write-Host "[!] RabbitMQ: Not running (Windows Service will work but won't process reminders)" -ForegroundColor Yellow
     Write-Host "  Start with: docker compose up -d rabbitmq" -ForegroundColor Cyan
 }
 
@@ -97,7 +97,7 @@ Get-Process | Where-Object {
     ($_.ProcessName -eq "dotnet" -and $_.Path -like "*TaskManagement*")
 } | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 2
-Write-Host "✓ Cleaned up existing processes" -ForegroundColor Green
+Write-Host "[OK] Cleaned up existing processes" -ForegroundColor Green
 Write-Host ""
 
 # Start services in separate windows
@@ -163,25 +163,25 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 if ($apiReady) {
-    Write-Host "✓ API: Running" -ForegroundColor Green
+    Write-Host "[OK] API: Running" -ForegroundColor Green
     Write-Host "  Swagger: http://localhost:5063/swagger" -ForegroundColor Cyan
 } else {
-    Write-Host "✗ API: Not responding (check the API window for errors)" -ForegroundColor Red
+    Write-Host "[X] API: Not responding (check the API window for errors)" -ForegroundColor Red
 }
 
 if ($frontendReady) {
-    Write-Host "✓ Frontend: Running" -ForegroundColor Green
+    Write-Host "[OK] Frontend: Running" -ForegroundColor Green
     Write-Host "  URL: http://localhost:5173" -ForegroundColor Cyan
 } else {
-    Write-Host "✗ Frontend: Not responding (check the Frontend window for errors)" -ForegroundColor Red
+    Write-Host "[X] Frontend: Not responding (check the Frontend window for errors)" -ForegroundColor Red
 }
 
-Write-Host "✓ Windows Service: Started (check the service window)" -ForegroundColor Green
+Write-Host "[OK] Windows Service: Started (check the service window)" -ForegroundColor Green
 
 if ($rabbitmqRunning) {
-    Write-Host "✓ RabbitMQ: Running" -ForegroundColor Green
+    Write-Host "[OK] RabbitMQ: Running" -ForegroundColor Green
 } else {
-    Write-Host "⚠ RabbitMQ: Not running (reminders won't be processed)" -ForegroundColor Yellow
+    Write-Host "[!] RabbitMQ: Not running (reminders won't be processed)" -ForegroundColor Yellow
 }
 
 Write-Host ""

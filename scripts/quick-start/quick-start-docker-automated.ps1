@@ -29,44 +29,44 @@ $missingPrerequisites = @()
 
 # Check .NET SDK
 if (-not (Test-Command "dotnet")) {
-    Write-Host "✗ .NET SDK not found" -ForegroundColor Red
+    Write-Host "[X] .NET SDK not found" -ForegroundColor Red
     $prerequisitesOk = $false
     $missingPrerequisites += ".NET 8.0 SDK (https://dotnet.microsoft.com/download)"
 } else {
     $version = dotnet --version
-    Write-Host "✓ .NET SDK: $version" -ForegroundColor Green
+    Write-Host "[OK] .NET SDK: $version" -ForegroundColor Green
 }
 
 # Check Node.js
 if (-not (Test-Command "node")) {
-    Write-Host "✗ Node.js not found" -ForegroundColor Red
+    Write-Host "[X] Node.js not found" -ForegroundColor Red
     $prerequisitesOk = $false
     $missingPrerequisites += "Node.js 20.19+ or 22.12+ (https://nodejs.org/)"
 } else {
     $version = node --version
-    Write-Host "✓ Node.js: $version" -ForegroundColor Green
+    Write-Host "[OK] Node.js: $version" -ForegroundColor Green
 }
 
 # Check Docker
 if (-not (Test-Command "docker")) {
-    Write-Host "✗ Docker not found" -ForegroundColor Red
+    Write-Host "[X] Docker not found" -ForegroundColor Red
     $prerequisitesOk = $false
     $missingPrerequisites += "Docker Desktop (https://www.docker.com/products/docker-desktop)"
 } else {
     $version = docker --version
-    Write-Host "✓ Docker: $version" -ForegroundColor Green
+    Write-Host "[OK] Docker: $version" -ForegroundColor Green
 }
 
 # Check Docker Compose
 $composeCommand = $null
 if (Test-Command "docker compose") {
     $composeCommand = "docker compose"
-    Write-Host "✓ Docker Compose: Available" -ForegroundColor Green
+    Write-Host "[OK] Docker Compose: Available" -ForegroundColor Green
 } elseif (Test-Command "docker-compose") {
     $composeCommand = "docker-compose"
-    Write-Host "✓ Docker Compose: Available" -ForegroundColor Green
+    Write-Host "[OK] Docker Compose: Available" -ForegroundColor Green
 } else {
-    Write-Host "✗ Docker Compose not found" -ForegroundColor Red
+    Write-Host "[X] Docker Compose not found" -ForegroundColor Red
     $prerequisitesOk = $false
     $missingPrerequisites += "Docker Compose (usually included with Docker Desktop)"
 }
@@ -87,9 +87,9 @@ if (-not $prerequisitesOk) {
 Write-Host "Checking if Docker is running..." -ForegroundColor Yellow
 try {
     docker ps | Out-Null
-    Write-Host "✓ Docker is running" -ForegroundColor Green
+    Write-Host "[OK] Docker is running" -ForegroundColor Green
 } catch {
-    Write-Host "✗ Docker is not running" -ForegroundColor Red
+    Write-Host "[X] Docker is not running" -ForegroundColor Red
     Write-Host "Please start Docker Desktop and try again." -ForegroundColor Yellow
     exit 1
 }
@@ -113,14 +113,14 @@ try {
     }
     Pop-Location
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "✗ Failed to start Docker services" -ForegroundColor Red
+        Write-Host "[X] Failed to start Docker services" -ForegroundColor Red
         exit 1
     }
-    Write-Host "✓ Docker services started" -ForegroundColor Green
+    Write-Host "[OK] Docker services started" -ForegroundColor Green
     Write-Host "  Waiting for services to be ready..." -ForegroundColor Yellow
     Start-Sleep -Seconds 15
 } catch {
-    Write-Host "✗ Error starting Docker services: $_" -ForegroundColor Red
+    Write-Host "[X] Error starting Docker services: $_" -ForegroundColor Red
     exit 1
 }
 
@@ -136,11 +136,11 @@ $setupScript = Join-Path $PSScriptRoot "..\setup-docker.ps1"
 if (Test-Path $setupScript) {
     & $setupScript
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "✗ Setup script failed" -ForegroundColor Red
+        Write-Host "[X] Setup script failed" -ForegroundColor Red
         exit 1
     }
 } else {
-    Write-Host "✗ Setup script not found: $setupScript" -ForegroundColor Red
+    Write-Host "[X] Setup script not found: $setupScript" -ForegroundColor Red
     exit 1
 }
 
@@ -156,7 +156,7 @@ $startScript = Join-Path $PSScriptRoot "..\start-all.ps1"
 if (Test-Path $startScript) {
     & $startScript
 } else {
-    Write-Host "✗ Start script not found: $startScript" -ForegroundColor Red
+    Write-Host "[X] Start script not found: $startScript" -ForegroundColor Red
     exit 1
 }
 
@@ -173,9 +173,9 @@ $dotnetVersion = dotnet --version
 $nodeVersion = node --version
 $npmVersion = npm --version
 
-Write-Host "  ✓ .NET SDK: $dotnetVersion" -ForegroundColor Green
-Write-Host "  ✓ Node.js: $nodeVersion" -ForegroundColor Green
-Write-Host "  ✓ npm: $npmVersion" -ForegroundColor Green
+Write-Host "  [OK] .NET SDK: $dotnetVersion" -ForegroundColor Green
+Write-Host "  [OK] Node.js: $nodeVersion" -ForegroundColor Green
+Write-Host "  [OK] npm: $npmVersion" -ForegroundColor Green
 
 Write-Host ""
 Write-Host "Verifying database setup..." -ForegroundColor Yellow
@@ -185,12 +185,12 @@ try {
     # Check if migrations are applied
     dotnet ef migrations list --project ..\TaskManagement.Infrastructure 2>&1 | Out-Null
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "  ✓ Database migrations verified" -ForegroundColor Green
+        Write-Host "  [OK] Database migrations verified" -ForegroundColor Green
     } else {
-        Write-Host "  ⚠ Database migrations may need to be applied" -ForegroundColor Yellow
+        Write-Host "  [!] Database migrations may need to be applied" -ForegroundColor Yellow
     }
 } catch {
-    Write-Host "  ⚠ Could not verify database migrations" -ForegroundColor Yellow
+    Write-Host "  [!] Could not verify database migrations" -ForegroundColor Yellow
 }
 Pop-Location
 
@@ -198,9 +198,9 @@ Write-Host ""
 Write-Host "Verifying frontend dependencies..." -ForegroundColor Yellow
 $webPath = Join-Path $PSScriptRoot "..\..\src\TaskManagement.Web"
 if (Test-Path (Join-Path $webPath "node_modules")) {
-    Write-Host "  ✓ Frontend dependencies installed" -ForegroundColor Green
+    Write-Host "  [OK] Frontend dependencies installed" -ForegroundColor Green
 } else {
-    Write-Host "  ⚠ Frontend dependencies not found" -ForegroundColor Yellow
+    Write-Host "  [!] Frontend dependencies not found" -ForegroundColor Yellow
 }
 
 Write-Host ""
@@ -227,7 +227,7 @@ if ($seedChoice -eq "y" -or $seedChoice -eq "Y") {
             $response = Invoke-WebRequest -Uri "http://localhost:5063/api/seed" -Method POST -TimeoutSec 2 -ErrorAction SilentlyContinue
             if ($response.StatusCode -eq 200) {
                 $apiReady = $true
-                Write-Host "  ✓ Database seeded successfully!" -ForegroundColor Green
+                Write-Host "  [OK] Database seeded successfully!" -ForegroundColor Green
             }
         } catch {
             Start-Sleep -Seconds 2
@@ -238,7 +238,7 @@ if ($seedChoice -eq "y" -or $seedChoice -eq "Y") {
     
     if (-not $apiReady) {
         Write-Host ""
-        Write-Host "  ⚠ Could not seed database automatically" -ForegroundColor Yellow
+        Write-Host "  [!] Could not seed database automatically" -ForegroundColor Yellow
         Write-Host "  You can seed it manually after the API starts:" -ForegroundColor Gray
         Write-Host "    POST http://localhost:5063/api/seed" -ForegroundColor Cyan
         Write-Host "    Or use Swagger UI: http://localhost:5063/swagger" -ForegroundColor Cyan

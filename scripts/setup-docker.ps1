@@ -31,43 +31,43 @@ $prerequisitesOk = $true
 $missingPrerequisites = @()
 
 if (-not (Test-Command "dotnet")) {
-    Write-Host "✗ .NET SDK not found" -ForegroundColor Red
+    Write-Host "[X] .NET SDK not found" -ForegroundColor Red
     $prerequisitesOk = $false
     $missingPrerequisites += ".NET 8.0 SDK"
 } else {
     $version = dotnet --version
-    Write-Host "✓ .NET SDK found: $version" -ForegroundColor Green
+    Write-Host "[OK] .NET SDK found: $version" -ForegroundColor Green
 }
 
 if (-not (Test-Command "node")) {
-    Write-Host "✗ Node.js not found" -ForegroundColor Red
+    Write-Host "[X] Node.js not found" -ForegroundColor Red
     $prerequisitesOk = $false
     $missingPrerequisites += "Node.js 20.19+ or 22.12+"
 } else {
     $version = node --version
-    Write-Host "✓ Node.js found: $version" -ForegroundColor Green
+    Write-Host "[OK] Node.js found: $version" -ForegroundColor Green
 }
 
 if (-not (Test-Command "docker")) {
-    Write-Host "✗ Docker not found" -ForegroundColor Red
+    Write-Host "[X] Docker not found" -ForegroundColor Red
     $prerequisitesOk = $false
     $missingPrerequisites += "Docker Desktop"
     Write-Host "  Download: https://www.docker.com/products/docker-desktop" -ForegroundColor Gray
 } else {
     $version = docker --version
-    Write-Host "✓ Docker found: $version" -ForegroundColor Green
+    Write-Host "[OK] Docker found: $version" -ForegroundColor Green
 }
 
 if (-not (Test-Command "docker-compose")) {
     if (-not (Test-Command "docker compose")) {
-        Write-Host "✗ Docker Compose not found" -ForegroundColor Red
+        Write-Host "[X] Docker Compose not found" -ForegroundColor Red
         $prerequisitesOk = $false
         $missingPrerequisites += "Docker Compose (usually included with Docker Desktop)"
     } else {
-        Write-Host "✓ Docker Compose found (docker compose)" -ForegroundColor Green
+        Write-Host "[OK] Docker Compose found (docker compose)" -ForegroundColor Green
     }
 } else {
-    Write-Host "✓ Docker Compose found" -ForegroundColor Green
+    Write-Host "[OK] Docker Compose found" -ForegroundColor Green
 }
 
 Write-Host ""
@@ -91,9 +91,9 @@ if (-not $prerequisitesOk) {
 Write-Host "Checking if Docker is running..." -ForegroundColor Yellow
 try {
     docker ps | Out-Null
-    Write-Host "✓ Docker is running" -ForegroundColor Green
+    Write-Host "[OK] Docker is running" -ForegroundColor Green
 } catch {
-    Write-Host "✗ Docker is not running" -ForegroundColor Red
+    Write-Host "[X] Docker is not running" -ForegroundColor Red
     Write-Host "Please start Docker Desktop and try again." -ForegroundColor Yellow
     exit 1
 }
@@ -115,10 +115,10 @@ try {
         docker-compose -f $dockerComposePath up -d
     }
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "✗ Failed to start Docker services" -ForegroundColor Red
+        Write-Host "[X] Failed to start Docker services" -ForegroundColor Red
         exit 1
     }
-    Write-Host "✓ Docker services started" -ForegroundColor Green
+    Write-Host "[OK] Docker services started" -ForegroundColor Green
     Write-Host ""
     
     Write-Host "Waiting for services to be ready..." -ForegroundColor Yellow
@@ -129,19 +129,19 @@ try {
     $rabbitmqHealth = docker inspect --format='{{.State.Health.Status}}' taskmanagement-rabbitmq 2>$null
     
     if ($sqlserverHealth -eq "healthy" -or $sqlserverHealth -eq "starting") {
-        Write-Host "✓ SQL Server is ready" -ForegroundColor Green
+        Write-Host "[OK] SQL Server is ready" -ForegroundColor Green
     } else {
-        Write-Host "⚠ SQL Server may still be starting (this is normal)" -ForegroundColor Yellow
+        Write-Host "[!] SQL Server may still be starting (this is normal)" -ForegroundColor Yellow
     }
     
     if ($rabbitmqHealth -eq "healthy" -or $rabbitmqHealth -eq "starting") {
-        Write-Host "✓ RabbitMQ is ready" -ForegroundColor Green
+        Write-Host "[OK] RabbitMQ is ready" -ForegroundColor Green
     } else {
-        Write-Host "⚠ RabbitMQ may still be starting (this is normal)" -ForegroundColor Yellow
+        Write-Host "[!] RabbitMQ may still be starting (this is normal)" -ForegroundColor Yellow
     }
     
 } catch {
-    Write-Host "✗ Error starting Docker services: $_" -ForegroundColor Red
+    Write-Host "[X] Error starting Docker services: $_" -ForegroundColor Red
     Write-Host "Try running: docker compose up -d" -ForegroundColor Yellow
     exit 1
 }
@@ -158,9 +158,9 @@ Write-Host "Checking Entity Framework tools..." -ForegroundColor Yellow
 if (-not (Test-Command "dotnet-ef")) {
     Write-Host "Installing dotnet-ef tool..." -ForegroundColor Yellow
     dotnet tool install --global dotnet-ef
-    Write-Host "✓ dotnet-ef installed" -ForegroundColor Green
+    Write-Host "[OK] dotnet-ef installed" -ForegroundColor Green
 } else {
-    Write-Host "✓ dotnet-ef found" -ForegroundColor Green
+    Write-Host "[OK] dotnet-ef found" -ForegroundColor Green
 }
 Write-Host ""
 
@@ -170,7 +170,7 @@ $apiPath = "src\TaskManagement.API"
 $infrastructurePath = "src\TaskManagement.Infrastructure"
 
 if (-not (Test-Path $apiPath)) {
-    Write-Host "✗ API project not found at $apiPath" -ForegroundColor Red
+    Write-Host "[X] API project not found at $apiPath" -ForegroundColor Red
     exit 1
 }
 
@@ -188,7 +188,7 @@ if ($appsettingsContent -notmatch "Server=localhost,1433") {
     Write-Host "Updating connection string for Docker SQL Server..." -ForegroundColor Yellow
     $appsettingsContent = $appsettingsContent -replace '(?s)"ConnectionStrings":\s*\{[^}]*"DefaultConnection":\s*"[^"]*"', "`"ConnectionStrings`": {`n    `"DefaultConnection`": `"$dockerConnectionString`""
     Set-Content -Path $appsettingsPath -Value $appsettingsContent -NoNewline
-    Write-Host "✓ Connection string updated" -ForegroundColor Green
+    Write-Host "[OK] Connection string updated" -ForegroundColor Green
 }
 
 # Update Windows Service connection string
@@ -199,7 +199,7 @@ if (Test-Path $serviceAppsettingsPath) {
         $serviceAppsettingsContent = $serviceAppsettingsContent -replace '(?s)"ConnectionStrings":\s*\{[^}]*"DefaultConnection":\s*"[^"]*"', "`"ConnectionStrings`": {`n    `"DefaultConnection`": `"$dockerConnectionString`""
         $serviceAppsettingsContent = $serviceAppsettingsContent -replace '(?s)"RabbitMQ":\s*\{[^}]*"HostName":\s*"[^"]*"', "`"RabbitMQ`": {`n    `"HostName`": `"localhost`""
         Set-Content -Path $serviceAppsettingsPath -Value $serviceAppsettingsContent -NoNewline
-        Write-Host "✓ Windows Service configuration updated" -ForegroundColor Green
+        Write-Host "[OK] Windows Service configuration updated" -ForegroundColor Green
     }
 }
 
@@ -209,21 +209,21 @@ Set-Location $apiPath
 try {
     dotnet ef database update --project "..\TaskManagement.Infrastructure" --no-build 2>&1 | Out-Null
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "✓ Database migrations applied" -ForegroundColor Green
+        Write-Host "[OK] Database migrations applied" -ForegroundColor Green
     } else {
         Write-Host "Running migrations (first time)..." -ForegroundColor Yellow
         dotnet ef database update --project "..\TaskManagement.Infrastructure"
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "✓ Database created and migrations applied" -ForegroundColor Green
+            Write-Host "[OK] Database created and migrations applied" -ForegroundColor Green
         } else {
-            Write-Host "✗ Database migration failed" -ForegroundColor Red
+            Write-Host "[X] Database migration failed" -ForegroundColor Red
             Write-Host "Make sure SQL Server container is running: docker ps" -ForegroundColor Yellow
             Set-Location "..\.."
             exit 1
         }
     }
 } catch {
-    Write-Host "✗ Error running migrations: $_" -ForegroundColor Red
+    Write-Host "[X] Error running migrations: $_" -ForegroundColor Red
     Write-Host "Make sure SQL Server container is running: docker ps" -ForegroundColor Yellow
     Set-Location "..\.."
     exit 1
@@ -236,7 +236,7 @@ Write-Host "Setting up frontend..." -ForegroundColor Yellow
 $webPath = "src\TaskManagement.Web"
 
 if (-not (Test-Path $webPath)) {
-    Write-Host "✗ Web project not found at $webPath" -ForegroundColor Red
+    Write-Host "[X] Web project not found at $webPath" -ForegroundColor Red
     exit 1
 }
 
@@ -245,14 +245,14 @@ if (-not (Test-Path "$webPath\node_modules")) {
     Set-Location $webPath
     npm install
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "✗ npm install failed" -ForegroundColor Red
+        Write-Host "[X] npm install failed" -ForegroundColor Red
         Set-Location "..\.."
         exit 1
     }
-    Write-Host "✓ Frontend dependencies installed" -ForegroundColor Green
+    Write-Host "[OK] Frontend dependencies installed" -ForegroundColor Green
     Set-Location "..\.."
 } else {
-    Write-Host "✓ Frontend dependencies already installed" -ForegroundColor Green
+    Write-Host "[OK] Frontend dependencies already installed" -ForegroundColor Green
 }
 Write-Host ""
 
@@ -260,10 +260,10 @@ Write-Host ""
 Write-Host "Building solution..." -ForegroundColor Yellow
 dotnet build
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "✗ Build failed" -ForegroundColor Red
+    Write-Host "[X] Build failed" -ForegroundColor Red
     exit 1
 }
-Write-Host "✓ Build successful" -ForegroundColor Green
+Write-Host "[OK] Build successful" -ForegroundColor Green
 Write-Host ""
 
 # Start services
