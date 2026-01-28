@@ -419,6 +419,170 @@ static void TryStartRabbitMQ(ILogger logger)
     }
 }
 
+// Helper function to start SQL Server using Docker
+static void TryStartSqlServer(ILogger logger)
+{
+    // First check if Docker is running
+    if (!IsDockerRunning(logger))
+    {
+        logger.LogWarning("Docker Desktop is not running. Cannot start SQL Server container.");
+        logger.LogWarning("Please start Docker Desktop and then start SQL Server manually:");
+        logger.LogWarning("  docker compose -f docker/docker-compose.yml up -d sqlserver");
+        return;
+    }
+    
+    try
+    {
+        // Find project root - try multiple strategies (same as TryStartRabbitMQ)
+        string? projectRoot = null;
+        
+        // Strategy 1: Start from AppContext.BaseDirectory (executable location)
+        var baseDir = AppContext.BaseDirectory;
+        var currentDir = baseDir;
+        
+        // Navigate up from bin/Debug/net8.0 or bin/Release/net8.0
+        for (int i = 0; i < 8; i++)
+        {
+            var dockerComposePath = Path.Combine(currentDir, "docker", "docker-compose.yml");
+            if (File.Exists(dockerComposePath))
+            {
+                projectRoot = currentDir;
+                break;
+            }
+            
+            var parent = Path.GetDirectoryName(currentDir);
+            if (string.IsNullOrEmpty(parent) || parent == currentDir)
+                break;
+            currentDir = parent;
+        }
+        
+        // Strategy 2: If not found, try from current working directory
+        if (projectRoot == null)
+        {
+            currentDir = Directory.GetCurrentDirectory();
+            for (int i = 0; i < 8; i++)
+            {
+                var dockerComposePath = Path.Combine(currentDir, "docker", "docker-compose.yml");
+                if (File.Exists(dockerComposePath))
+                {
+                    projectRoot = currentDir;
+                    break;
+                }
+                
+                var parent = Path.GetDirectoryName(currentDir);
+                if (string.IsNullOrEmpty(parent) || parent == currentDir)
+                    break;
+                currentDir = parent;
+            }
+        }
+        
+        // Strategy 3: Try common project root patterns
+        if (projectRoot == null)
+        {
+            var possibleRoots = new[]
+            {
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Desktop", "UserTasks"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Desktop", "try"),
+            };
+            
+            foreach (var possibleRoot in possibleRoots)
+            {
+                var dockerComposePath = Path.Combine(possibleRoot, "docker", "docker-compose.yml");
+                if (File.Exists(dockerComposePath))
+                {
+                    projectRoot = possibleRoot;
+                    break;
+                }
+            }
+        }
+        
+        if (projectRoot != null)
+        {
+            var dockerComposePath = Path.Combine(projectRoot, "docker", "docker-compose.yml");
+            if (File.Exists(dockerComposePath))
+            {
+                // Found docker-compose.yml, try to start SQL Server
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = "docker",
+                    Arguments = $"compose -f \"{dockerComposePath}\" --project-directory \"{projectRoot}\" up -d sqlserver",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+                
+                using var process = Process.Start(startInfo);
+                if (process != null)
+                {
+                    var output = process.StandardOutput.ReadToEnd();
+                    var error = process.StandardError.ReadToEnd();
+                    process.WaitForExit(10000); // Wait up to 10 seconds
+                    
+                    if (process.ExitCode == 0)
+                    {
+                        logger.LogInformation("SQL Server container started successfully");
+                        // SQL Server takes longer to initialize, so we'll wait in the main startup sequence
+                        return;
+                    }
+                    else
+                    {
+                        logger.LogWarning("Docker compose command failed with exit code {ExitCode}. Output: {Output}, Error: {Error}", 
+                            process.ExitCode, output, error);
+                    }
+                }
+                else
+                {
+                    logger.LogWarning("Failed to start docker process. Docker may not be installed or accessible.");
+                }
+                
+                // Try docker-compose (older syntax)
+                startInfo = new ProcessStartInfo
+                {
+                    FileName = "docker-compose",
+                    Arguments = $"-f \"{dockerComposePath}\" --project-directory \"{projectRoot}\" up -d sqlserver",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+                
+                using var process2 = Process.Start(startInfo);
+                if (process2 != null)
+                {
+                    var output2 = process2.StandardOutput.ReadToEnd();
+                    var error2 = process2.StandardError.ReadToEnd();
+                    process2.WaitForExit(10000);
+                    
+                    if (process2.ExitCode == 0)
+                    {
+                        logger.LogInformation("SQL Server container started successfully (using docker-compose)");
+                        return;
+                    }
+                    else
+                    {
+                        logger.LogWarning("Docker-compose command failed with exit code {ExitCode}. Output: {Output}, Error: {Error}", 
+                            process2.ExitCode, output2, error2);
+                    }
+                }
+                
+                logger.LogWarning("Could not start SQL Server container. Please start it manually: docker compose -f docker/docker-compose.yml up -d sqlserver");
+                return;
+            }
+        }
+        
+        if (projectRoot == null)
+        {
+            logger.LogWarning("Could not find docker-compose.yml file. Searched from: {BaseDirectory}, {WorkingDirectory}. SQL Server will not be started automatically.", 
+                AppContext.BaseDirectory, Directory.GetCurrentDirectory());
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "Error attempting to start SQL Server. Please start it manually: docker compose -f docker/docker-compose.yml up -d sqlserver");
+    }
+}
+
 // Create a temporary logger for RabbitMQ startup check
 var tempLogger = LoggerFactory.Create(loggingBuilder => loggingBuilder
     .AddConsole(options =>
@@ -432,15 +596,19 @@ var tempLogger = LoggerFactory.Create(loggingBuilder => loggingBuilder
         options.ColorBehavior = Microsoft.Extensions.Logging.Console.LoggerColorBehavior.Enabled;
     })).CreateLogger("Program");
 
-// Check if SQL Server is running (critical dependency) and wait for it to be ready
+// Check if SQL Server is running (critical dependency) and try to start it if not
 if (!IsSqlServerRunning())
 {
-    tempLogger.LogWarning("SQL Server is not accessible on localhost:1433. Waiting for it to become ready...");
+    tempLogger.LogWarning("SQL Server is not accessible on localhost:1433. Attempting to start it...");
     tempLogger.LogWarning("Please ensure SQL Server Docker container is running: docker compose -f docker/docker-compose.yml up -d sqlserver");
     tempLogger.LogWarning("Or if using LocalDB, ensure it's started: sqllocaldb start mssqllocaldb");
     
+    // Try to start SQL Server container
+    TryStartSqlServer(tempLogger);
+    
     // Wait for SQL Server to be ready (critical - service needs database)
-    if (!WaitForSqlServerReady(tempLogger, maxWaitSeconds: 60))
+    // SQL Server can take 30-60 seconds to fully initialize
+    if (!WaitForSqlServerReady(tempLogger, maxWaitSeconds: 90))
     {
         tempLogger.LogError("SQL Server did not become ready. Service may not function correctly.");
     }
