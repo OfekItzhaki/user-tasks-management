@@ -202,9 +202,11 @@ try {
         docker-compose -f $dockerComposePath --project-directory $projectRoot up -d
     }
     if ($LASTEXITCODE -ne 0) {
+        Pop-Location
         Write-Host "[X] Failed to start Docker services" -ForegroundColor Red
         exit 1
     }
+    Pop-Location
     Write-Host "[OK] Docker services started" -ForegroundColor Green
     Write-Host ""
     
