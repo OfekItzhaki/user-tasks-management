@@ -10,6 +10,7 @@ public class TaskDto
     public DateTime DueDate { get; set; }
     public Priority Priority { get; set; }
     public int CreatedByUserId { get; set; }
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
     public List<UserTaskDto> Users { get; set; } = new();
     public List<TagDto> Tags { get; set; } = new();
 }

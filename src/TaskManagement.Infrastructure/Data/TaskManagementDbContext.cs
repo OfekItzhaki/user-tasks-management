@@ -43,6 +43,23 @@ public class TaskManagementDbContext : DbContext
                 .IsRequired();
             entity.Property(e => e.UpdatedAt)
                 .IsRequired();
+            
+            // Optimistic concurrency control
+            entity.Property(e => e.RowVersion)
+                .IsRowVersion()
+                .IsConcurrencyToken();
+
+            // Performance indexes
+            entity.HasIndex(e => e.DueDate)
+                .HasDatabaseName("IX_Tasks_DueDate");
+            entity.HasIndex(e => e.Priority)
+                .HasDatabaseName("IX_Tasks_Priority");
+            entity.HasIndex(e => e.CreatedAt)
+                .HasDatabaseName("IX_Tasks_CreatedAt");
+            entity.HasIndex(e => e.Title)
+                .HasDatabaseName("IX_Tasks_Title");
+            entity.HasIndex(e => e.Description)
+                .HasDatabaseName("IX_Tasks_Description");
 
             entity.HasMany(e => e.UserTasks)
                 .WithOne(ut => ut.Task)

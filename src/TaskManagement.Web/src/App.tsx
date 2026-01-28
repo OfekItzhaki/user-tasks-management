@@ -110,13 +110,19 @@ function App() {
         priority: data.priority,
         userIds: data.userIds || [],
         tagIds: data.tagIds || [],
+        rowVersion: editingTask.rowVersion, // Include rowVersion for optimistic concurrency
       };
       await dispatch(updateTask({ id: editingTask.id, task: updateData })).unwrap();
       setEditingTask(null);
       setShowForm(false);
       dispatch(fetchTasks());
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to update task:', err);
+      // Handle concurrency errors
+      if (err?.message?.includes('modified by another user') || err?.response?.data?.includes('modified')) {
+        alert('This task has been modified by another user. Please refresh and try again.');
+        dispatch(fetchTasks()); // Refresh the task list
+      }
     }
   };
 

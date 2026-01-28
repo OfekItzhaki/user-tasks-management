@@ -29,6 +29,12 @@ public class UpdateTaskCommandHandler : IRequestHandler<UpdateTaskCommand, TaskD
             throw new KeyNotFoundException($"Task with ID {request.Id} not found.");
         }
 
+        // Optimistic concurrency check - set original value for EF Core to compare
+        if (request.Task.RowVersion != null && request.Task.RowVersion.Length > 0)
+        {
+            _context.Entry(task).Property(t => t.RowVersion).OriginalValue = request.Task.RowVersion;
+        }
+
         task.Title = request.Task.Title;
         task.Description = request.Task.Description;
         task.DueDate = request.Task.DueDate;
@@ -78,7 +84,17 @@ public class UpdateTaskCommandHandler : IRequestHandler<UpdateTaskCommand, TaskD
             }
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            // Reload the task to get the current RowVersion
+            await _context.Entry(task).ReloadAsync(cancellationToken);
+            throw new DbUpdateConcurrencyException(
+                $"Task with ID {request.Id} has been modified by another user. Please refresh and try again.", ex);
+        }
 
         await _context.Entry(task)
             .Collection(t => t.UserTasks)

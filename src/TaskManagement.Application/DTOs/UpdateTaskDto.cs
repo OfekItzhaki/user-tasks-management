@@ -55,4 +55,11 @@ public class UpdateTaskDto
     [Required]
     [MinLength(1, ErrorMessage = "At least one tag must be selected")]
     public List<int> TagIds { get; set; } = new();
+
+    /// <summary>
+    /// Row version for optimistic concurrency control. 
+    /// This should match the RowVersion of the task when it was loaded.
+    /// If provided and doesn't match, the update will fail with a concurrency error.
+    /// </summary>
+    public byte[]? RowVersion { get; set; }
 }

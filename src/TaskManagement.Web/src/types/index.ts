@@ -37,6 +37,7 @@ export interface Task {
   dueDate: string;
   priority: Priority;
   createdByUserId: number;
+  rowVersion?: string; // Base64 encoded byte array for optimistic concurrency
   users: UserTask[];
   tags: Tag[];
 }
@@ -58,6 +59,7 @@ export interface UpdateTaskDto {
   priority: Priority;
   userIds: number[];
   tagIds: number[];
+  rowVersion?: string; // Base64 encoded byte array for optimistic concurrency
 }
 
 export interface PagedResult<T> {

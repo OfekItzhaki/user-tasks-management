@@ -16,6 +16,7 @@ public static class TaskExtensions
             DueDate = task.DueDate,
             Priority = task.Priority,
             CreatedByUserId = task.CreatedByUserId,
+            RowVersion = task.RowVersion,
             Users = task.UserTasks.Select(ut => new UserTaskDto
             {
                 User = new UserDto

@@ -12,6 +12,9 @@ public class Task
     public int CreatedByUserId { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    
+    // Optimistic concurrency control
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
     // Navigation properties
     public ICollection<UserTask> UserTasks { get; set; } = new List<UserTask>();
