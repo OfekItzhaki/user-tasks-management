@@ -1,0 +1,48 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+!README.md
+instructions/
+QUICK_START.md
+REQUIREMENTS_REVIEW.md
+PROJECT_RECOMMENDATIONS.md
+SETUP_IMPROVEMENTS.md
+
+# Build outputs
+bin/
+obj/
+node_modules/
+dist/
+.vite/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Test results
+TestResults/
+coverage/
+
+# PowerShell scripts (not needed in Docker)
+*.ps1

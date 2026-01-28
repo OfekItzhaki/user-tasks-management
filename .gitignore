@@ -96,3 +96,6 @@ Thumbs.db
 
 # Instructions folder (team-specific documentation)
 instructions/
+
+# Docker
+docker-compose.override.yml

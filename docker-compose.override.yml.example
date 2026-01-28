@@ -1,0 +1,23 @@
+# Copy this file to docker-compose.override.yml to customize settings
+# docker-compose.override.yml is automatically loaded by docker-compose
+
+version: '3.8'
+
+services:
+  sqlserver:
+    environment:
+      # Change the SA password here (must be strong: 8+ chars, uppercase, lowercase, numbers, special chars)
+      SA_PASSWORD: "YourStrong@Passw0rd123"
+    # Uncomment to change port mapping
+    # ports:
+    #   - "1434:1433"  # Use 1434 instead of 1433 to avoid conflicts
+
+  rabbitmq:
+    environment:
+      # Change RabbitMQ credentials here
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    # Uncomment to change port mapping
+    # ports:
+    #   - "5673:5672"   # Use 5673 instead of 5672
+    #   - "15673:15672" # Use 15673 instead of 15672

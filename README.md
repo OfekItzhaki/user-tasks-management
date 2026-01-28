@@ -138,16 +138,31 @@ The application follows **Clean Architecture** principles with **CQRS (Command Q
 
 ## Prerequisites
 
-The setup script (`.\setup.ps1`) will check for these automatically, but if you're setting up manually, you'll need:
+### For Docker Setup (Recommended)
+
+The setup script (`.\setup-docker.ps1`) will check for these automatically:
 
 1. **.NET 8.0 SDK** - [Download](https://dotnet.microsoft.com/download/dotnet/8.0)
    - Verify: `dotnet --version` (should show 8.0.x)
+2. **Node.js 20.19+ or 22.12+** and **npm** - [Download](https://nodejs.org/)
+   - Verify: `node --version` and `npm --version`
+3. **Docker Desktop** - [Download](https://www.docker.com/products/docker-desktop)
+   - Includes Docker Compose
+   - Verify: `docker --version` and `docker compose version`
+4. **Visual Studio 2022** or **VS Code** (optional, for development)
+
+**That's it!** No need to install SQL Server or RabbitMQ - Docker handles it.
+
+### For Local Setup (Traditional)
+
+If using `.\setup.ps1` instead:
+
+1. **.NET 8.0 SDK** - [Download](https://dotnet.microsoft.com/download/dotnet/8.0)
 2. **SQL Server LocalDB** (recommended) or SQL Server Express
    - Usually comes with Visual Studio
    - Or download: [SQL Server Express](https://www.microsoft.com/sql-server/sql-server-downloads)
    - Verify: `sqllocaldb info mssqllocaldb`
 3. **Node.js 20.19+ or 22.12+** and **npm** - [Download](https://nodejs.org/)
-   - Verify: `node --version` and `npm --version`
 4. **RabbitMQ** (optional, for Windows Service)
    - **Recommended**: Use Docker: `docker run -d --hostname my-rabbit --name some-rabbit -p 5672:5672 -p 15672:15672 rabbitmq:3-management`
    - Or install locally: [RabbitMQ Downloads](https://www.rabbitmq.com/download.html)
@@ -214,21 +229,30 @@ This will create sample users, tags, and tasks for testing.
 
 ### 4. RabbitMQ Setup
 
-1. **Install RabbitMQ**:
-   - Windows: Download and install from [RabbitMQ Downloads](https://www.rabbitmq.com/download.html)
-   - Or use Docker: `docker run -d --hostname my-rabbit --name some-rabbit -p 5672:5672 -p 15672:15672 rabbitmq:3-management`
+**Option A: Using Docker Compose (Recommended)**
+- RabbitMQ is automatically started with `.\setup-docker.ps1`
+- Or manually: `docker compose up -d rabbitmq`
+- Management UI: http://localhost:15672 (guest/guest)
 
-2. **Verify RabbitMQ is running**:
-   - Management UI: http://localhost:15672 (guest/guest)
-   - Default port: 5672
+**Option B: Using Docker (Standalone)**
+```powershell
+docker run -d --hostname my-rabbit --name some-rabbit -p 5672:5672 -p 15672:15672 rabbitmq:3-management
+```
 
-3. **Update configuration** (if needed):
-   - `src/TaskManagement.WindowsService/appsettings.json`
-   ```json
-   "RabbitMQ": {
-     "HostName": "localhost"
-   }
-   ```
+**Option C: Local Installation**
+- Windows: Download and install from [RabbitMQ Downloads](https://www.rabbitmq.com/download.html)
+
+**Verify RabbitMQ is running**:
+- Management UI: http://localhost:15672 (guest/guest)
+- Default port: 5672
+
+**Update configuration** (if needed):
+- `src/TaskManagement.WindowsService/appsettings.json`
+  ```json
+  "RabbitMQ": {
+    "HostName": "localhost"  // Use "rabbitmq" if running in Docker network
+  }
+  ```
 
 ### 5. Backend Setup
 
@@ -398,26 +422,47 @@ POST /api/tasks
 
 ## 🚀 Quick Start
 
-### For New Machines (First Time Setup)
+### Option 1: Docker Setup (Recommended - Easiest) 🐳
 
-**The easiest way to get started** - Run the automated setup script:
+**No need to install SQL Server or RabbitMQ locally!** Uses Docker Compose:
 
 ```powershell
-.\setup.ps1
+.\setup-docker.ps1
 ```
 
 This single command will:
-- ✅ **Check prerequisites** (.NET 8.0 SDK, Node.js 20+, SQL Server LocalDB)
+- ✅ **Check prerequisites** (.NET 8.0 SDK, Node.js 20+, Docker Desktop)
+- ✅ **Start Docker services** (SQL Server and RabbitMQ in containers)
 - ✅ **Install missing tools** (dotnet-ef tool automatically)
 - ✅ **Set up database** (create database and run migrations)
 - ✅ **Install frontend dependencies** (npm packages)
 - ✅ **Build the solution** (compile all projects)
 - ✅ **Start all services** (API, Frontend, Windows Service)
 
-**That's it!** The script handles everything automatically. After it completes, you'll have:
+**That's it!** Everything runs automatically. After it completes, you'll have:
 - Frontend running at: http://localhost:5173
 - API Swagger at: http://localhost:5063/swagger
-- Windows Service running (Development or Production mode)
+- Windows Service running (Development mode)
+- SQL Server in Docker: localhost:1433
+- RabbitMQ in Docker: localhost:5672 (Management UI: http://localhost:15672)
+
+**Benefits:**
+- ✅ No local SQL Server installation needed
+- ✅ No local RabbitMQ installation needed
+- ✅ Consistent environment across machines
+- ✅ Easy cleanup: `docker compose down`
+
+### Option 2: Local Setup (Traditional)
+
+If you prefer local installations or don't have Docker:
+
+```powershell
+.\setup.ps1
+```
+
+This requires:
+- SQL Server LocalDB (comes with Visual Studio) or SQL Server Express
+- RabbitMQ installed locally or via Docker
 
 ### For Existing Setup (Quick Run)
 
@@ -428,6 +473,11 @@ If everything is already set up, just start the services:
 ```
 
 This will start all services without running setup checks.
+
+**For Docker setup**, make sure Docker services are running:
+```powershell
+docker compose up -d
+```
 
 ### 📖 Manual Setup (If Scripts Don't Work)
 
@@ -470,15 +520,15 @@ See [QUICK_START.md](QUICK_START.md) for more detailed manual setup instructions
 
 ### Development Mode
 
-1. **Start SQL Server** (LocalDB starts automatically)
+#### Using Docker Setup
 
-2. **Start RabbitMQ**:
-   ```bash
-   # If using Docker
-   docker start some-rabbit
+1. **Start Docker services** (if not already running):
+   ```powershell
+   docker compose up -d
    ```
+   This starts SQL Server and RabbitMQ in containers.
 
-3. **Start the API**:
+2. **Start the API**:
    ```bash
    cd src/TaskManagement.API
    dotnet run
@@ -692,6 +742,33 @@ Then run `.\setup.ps1` again.
 **Problem**: Cannot connect to database
 
 **Solutions**:
+
+**For Docker Setup:**
+1. **Verify Docker services are running**:
+   ```powershell
+   docker compose ps
+   docker compose logs sqlserver
+   ```
+
+2. **Check connection string** in `src/TaskManagement.API/appsettings.json`:
+   ```json
+   "ConnectionStrings": {
+     "DefaultConnection": "Server=localhost,1433;Database=TaskManagementDb;User Id=sa;Password=YourStrong@Passw0rd123;TrustServerCertificate=True;MultipleActiveResultSets=true"
+   }
+   ```
+
+3. **Restart SQL Server container**:
+   ```powershell
+   docker compose restart sqlserver
+   ```
+
+4. **Re-run migrations**:
+   ```powershell
+   cd src\TaskManagement.API
+   dotnet ef database update --project ..\TaskManagement.Infrastructure
+   ```
+
+**For Local Setup:**
 1. **Verify SQL Server LocalDB is running**:
    ```powershell
    sqllocaldb start mssqllocaldb
@@ -716,6 +793,29 @@ Then run `.\setup.ps1` again.
 **Problem**: Windows Service can't connect to RabbitMQ
 
 **Solutions**:
+
+**For Docker Setup:**
+1. **Check if RabbitMQ container is running**:
+   ```powershell
+   docker compose ps
+   docker compose logs rabbitmq
+   ```
+
+2. **Start RabbitMQ container**:
+   ```powershell
+   docker compose up -d rabbitmq
+   ```
+
+3. **Verify RabbitMQ Management UI**: http://localhost:15672 (guest/guest)
+
+4. **Check configuration** in `src/TaskManagement.WindowsService/appsettings.json`:
+   ```json
+   "RabbitMQ": {
+     "HostName": "localhost"  // Use "rabbitmq" if running in Docker network
+   }
+   ```
+
+**For Local Setup:**
 1. **Check if RabbitMQ is running**:
    ```powershell
    docker ps --filter "name=rabbit"
