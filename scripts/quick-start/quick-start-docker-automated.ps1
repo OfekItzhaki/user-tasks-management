@@ -244,16 +244,47 @@ try {
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[X] Failed to start Docker services" -ForegroundColor Red
         Write-Host ""
-        Write-Host "Common issues:" -ForegroundColor Yellow
-        Write-Host "  - Docker Desktop is not running (start it from Start menu)" -ForegroundColor White
-        Write-Host "  - Docker Desktop is still starting (wait 30-60 seconds)" -ForegroundColor White
-        Write-Host "  - Port conflicts (check if ports 1433, 5672, 15672 are in use)" -ForegroundColor White
-        Write-Host ""
-        Write-Host "Try:" -ForegroundColor Yellow
-        Write-Host "  1. Start Docker Desktop and wait for it to fully start" -ForegroundColor White
-        Write-Host "  2. Check Docker Desktop status in system tray" -ForegroundColor White
-        Write-Host "  3. Run this script again" -ForegroundColor White
-        exit 1
+        
+        # Check if Docker is still running
+        if (-not (Test-DockerRunning)) {
+            Write-Host "Docker Desktop appears to have stopped or crashed." -ForegroundColor Yellow
+            Write-Host "Attempting to restart Docker Desktop..." -ForegroundColor Yellow
+            Write-Host ""
+            Start-DockerDesktop
+            Write-Host ""
+            Write-Host "Retrying Docker services startup..." -ForegroundColor Yellow
+            
+            # Retry starting services
+            Push-Location $projectRoot
+            if ($composeCommand -eq "docker compose") {
+                docker compose -f $dockerComposePath up -d sqlserver rabbitmq 2>&1 | Out-String | Out-Null
+            } else {
+                docker-compose -f $dockerComposePath up -d sqlserver rabbitmq 2>&1 | Out-String | Out-Null
+            }
+            Pop-Location
+            
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "[X] Still failed to start Docker services after restart" -ForegroundColor Red
+                Write-Host ""
+                Write-Host "Common issues:" -ForegroundColor Yellow
+                Write-Host "  - Port conflicts (check if ports 1433, 5672, 15672 are in use)" -ForegroundColor White
+                Write-Host "  - Virtualization not enabled in BIOS" -ForegroundColor White
+                Write-Host "  - WSL 2 not installed or configured" -ForegroundColor White
+                Write-Host ""
+                Write-Host "Please check Docker Desktop for error messages and try again." -ForegroundColor Yellow
+                exit 1
+            }
+        } else {
+            Write-Host "Common issues:" -ForegroundColor Yellow
+            Write-Host "  - Port conflicts (check if ports 1433, 5672, 15672 are in use)" -ForegroundColor White
+            Write-Host "  - Docker Desktop may need a restart" -ForegroundColor White
+            Write-Host ""
+            Write-Host "Try:" -ForegroundColor Yellow
+            Write-Host "  1. Check Docker Desktop for error messages" -ForegroundColor White
+            Write-Host "  2. Restart Docker Desktop" -ForegroundColor White
+            Write-Host "  3. Run this script again" -ForegroundColor White
+            exit 1
+        }
     }
     Write-Host "[OK] Docker services started" -ForegroundColor Green
     Write-Host "  Waiting for services to be ready..." -ForegroundColor Yellow
