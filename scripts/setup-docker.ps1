@@ -290,14 +290,34 @@ $serviceAppsettingsPaths = @(
 
 foreach ($serviceAppsettingsPath in $serviceAppsettingsPaths) {
     if (Test-Path $serviceAppsettingsPath) {
-        $serviceAppsettingsContent = Get-Content $serviceAppsettingsPath -Raw
-        # Always update to ensure Docker connection string (force update)
-        # Replace the entire ConnectionStrings section
-        $serviceAppsettingsContent = $serviceAppsettingsContent -replace '(?s)"ConnectionStrings"\s*:\s*\{[^}]*"DefaultConnection"\s*:\s*"[^"]*"', "`"ConnectionStrings`": {`n    `"DefaultConnection`": `"$dockerConnectionString`""
-        # Replace RabbitMQ HostName
-        $serviceAppsettingsContent = $serviceAppsettingsContent -replace '(?s)"RabbitMQ"\s*:\s*\{[^}]*"HostName"\s*:\s*"[^"]*"', "`"RabbitMQ`": {`n    `"HostName`": `"localhost`""
-        Set-Content -Path $serviceAppsettingsPath -Value $serviceAppsettingsContent -NoNewline
-        Write-Host "[OK] Windows Service configuration updated: $(Split-Path $serviceAppsettingsPath -Leaf)" -ForegroundColor Green
+        try {
+            # Read the JSON file
+            $jsonContent = Get-Content $serviceAppsettingsPath -Raw | ConvertFrom-Json
+            
+            # Update connection string
+            if (-not $jsonContent.ConnectionStrings) {
+                $jsonContent | Add-Member -MemberType NoteProperty -Name "ConnectionStrings" -Value @{} -Force
+            }
+            $jsonContent.ConnectionStrings.DefaultConnection = $dockerConnectionString
+            
+            # Update RabbitMQ HostName
+            if (-not $jsonContent.RabbitMQ) {
+                $jsonContent | Add-Member -MemberType NoteProperty -Name "RabbitMQ" -Value @{} -Force
+            }
+            $jsonContent.RabbitMQ.HostName = "localhost"
+            
+            # Write back to file with proper formatting
+            $jsonContent | ConvertTo-Json -Depth 10 | Set-Content -Path $serviceAppsettingsPath
+            Write-Host "[OK] Windows Service configuration updated: $(Split-Path $serviceAppsettingsPath -Leaf)" -ForegroundColor Green
+        } catch {
+            Write-Host "[!] Warning: Could not update $serviceAppsettingsPath : $_" -ForegroundColor Yellow
+            # Fallback to regex replacement
+            $serviceAppsettingsContent = Get-Content $serviceAppsettingsPath -Raw
+            $serviceAppsettingsContent = $serviceAppsettingsContent -replace '(?s)"ConnectionStrings"\s*:\s*\{[^}]*"DefaultConnection"\s*:\s*"[^"]*"', "`"ConnectionStrings`": {`n    `"DefaultConnection`": `"$dockerConnectionString`""
+            $serviceAppsettingsContent = $serviceAppsettingsContent -replace '(?s)"RabbitMQ"\s*:\s*\{[^}]*"HostName"\s*:\s*"[^"]*"', "`"RabbitMQ`": {`n    `"HostName`": `"localhost`""
+            Set-Content -Path $serviceAppsettingsPath -Value $serviceAppsettingsContent -NoNewline
+            Write-Host "[OK] Windows Service configuration updated (fallback method): $(Split-Path $serviceAppsettingsPath -Leaf)" -ForegroundColor Green
+        }
     }
 }
 
