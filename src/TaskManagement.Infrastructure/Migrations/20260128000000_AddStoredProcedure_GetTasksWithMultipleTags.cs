@@ -48,9 +48,9 @@ BEGIN
             FOR XML PATH(''), TYPE
         ).value('.', 'NVARCHAR(MAX)'), 1, 2, '') AS AssignedUsers
     FROM Tasks t
-        INNER JOIN TaskTags tt ON t.Id = tt.TaskId
-        LEFT JOIN UserTasks ut ON t.Id = ut.TaskId
-        GROUP BY t.Id, t.Title, t.Description, t.DueDate, t.Priority
+    INNER JOIN TaskTags tt ON t.Id = tt.TaskId
+    LEFT JOIN UserTasks ut ON t.Id = ut.TaskId
+    GROUP BY t.Id, t.Title, t.Description, t.DueDate, t.Priority
     HAVING COUNT(DISTINCT tt.TagId) >= @MinTagCount
     ORDER BY TagCount DESC;
 END");
