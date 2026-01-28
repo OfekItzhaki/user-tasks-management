@@ -552,23 +552,58 @@ See [QUICK_START.md](QUICK_START.md) for more detailed manual setup instructions
 
 ## Testing
 
-### Run Backend Tests
+### Run All Tests (Backend + Frontend)
 
-```bash
+Run both backend and frontend tests with a single command:
+
+```powershell
+.\run-all-tests.ps1
+```
+
+This will:
+- Run all .NET backend tests (xUnit)
+- Run all frontend tests (Vitest + React Testing Library)
+- Show a summary of results
+
+### Backend Tests
+
+```powershell
 cd src/TaskManagement.Tests
 dotnet test
 ```
 
+### Frontend Tests
+
+```powershell
+cd src/TaskManagement.Web
+npm run test
+```
+
+For interactive testing:
+```powershell
+npm run test:ui
+```
+
+For coverage:
+```powershell
+npm run test:coverage
+```
+
 ### Test Coverage
 
-- **Unit Tests**: Validators, Handlers
-- **Integration Tests**: API Controllers
+- **Backend Unit Tests**: Validators, Handlers
+- **Backend Integration Tests**: API Controllers
+- **Frontend Component Tests**: TaskForm, TaskList, TaskFilters
+- **Frontend Security Tests**: XSS protection, HTML encoding
 
 ### Example Test
 
 ```bash
-# Run specific test
+# Run specific backend test
 dotnet test --filter "FullyQualifiedName~CreateTaskDtoValidatorTests"
+
+# Run specific frontend test
+npm run test -- TaskForm.test.tsx
 ```
 
 ## SQL Query

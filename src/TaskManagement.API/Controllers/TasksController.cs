@@ -72,10 +72,16 @@ public class TasksController : ControllerBase
                 tagIds != null ? string.Join(",", tagIds) : "null",
                 priorities != null ? string.Join(",", priorities) : "null");
 
-            // Sanitize string inputs (trim whitespace, handle empty strings)
-            var sanitizedSearchTerm = string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm.Trim();
-            var sanitizedSortBy = string.IsNullOrWhiteSpace(sortBy) ? "createdAt" : sortBy.Trim();
-            var sanitizedSortOrder = string.IsNullOrWhiteSpace(sortOrder) ? "desc" : sortOrder.Trim().ToLower();
+            // Sanitize string inputs (trim whitespace, handle empty strings, prevent XSS)
+            var sanitizedSearchTerm = string.IsNullOrWhiteSpace(searchTerm) 
+                ? null 
+                : Application.Common.InputSanitizer.Sanitize(searchTerm);
+            var sanitizedSortBy = string.IsNullOrWhiteSpace(sortBy) 
+                ? "createdAt" 
+                : Application.Common.InputSanitizer.Sanitize(sortBy);
+            var sanitizedSortOrder = string.IsNullOrWhiteSpace(sortOrder) 
+                ? "desc" 
+                : Application.Common.InputSanitizer.Sanitize(sortOrder).ToLower();
 
             // Validate sort fields
             var validSortFields = new[] { "title", "duedate", "priority", "createdat" };

@@ -35,8 +35,8 @@ public class UpdateTaskCommandHandler : IRequestHandler<UpdateTaskCommand, TaskD
             _context.Entry(task).Property(t => t.RowVersion).OriginalValue = request.Task.RowVersion;
         }
 
-        task.Title = request.Task.Title;
-        task.Description = request.Task.Description;
+        task.Title = Common.InputSanitizer.Sanitize(request.Task.Title);
+        task.Description = Common.InputSanitizer.Sanitize(request.Task.Description);
         task.DueDate = request.Task.DueDate;
         task.Priority = request.Task.Priority;
         task.UpdatedAt = DateTime.UtcNow;

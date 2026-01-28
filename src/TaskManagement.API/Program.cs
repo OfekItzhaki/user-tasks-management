@@ -46,13 +46,32 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowReactApp", policy =>
+    // Development: Allow localhost origins
+    if (builder.Environment.IsDevelopment())
     {
-        policy.WithOrigins("http://localhost:3000", "http://localhost:5173")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
-    });
+        options.AddPolicy("AllowReactApp", policy =>
+        {
+            policy.WithOrigins("http://localhost:3000", "http://localhost:5173")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        });
+    }
+    else
+    {
+        // Production: Restrict to specific origins from configuration
+        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() 
+            ?? new[] { "https://localhost:5173" };
+        
+        options.AddPolicy("AllowReactApp", policy =>
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials()
+                  .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
+        });
+    }
 });
 
 var app = builder.Build();

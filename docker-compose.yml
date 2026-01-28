@@ -1,4 +1,48 @@
 services:
+  api:
+    build:
+      context: .
+      dockerfile: src/TaskManagement.API/Dockerfile
+    container_name: taskmanagement-api
+    ports:
+      - "5063:80"
+      - "7000:443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Docker
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=TaskManagementDb;User Id=sa;Password=YourStrong@Passw0rd123;TrustServerCertificate=True
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - taskmanagement-network
+
+  frontend:
+    build:
+      context: src/TaskManagement.Web
+      dockerfile: Dockerfile
+    container_name: taskmanagement-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+    networks:
+      - taskmanagement-network
+
+  windows-service:
+    build:
+      context: .
+      dockerfile: src/TaskManagement.WindowsService/Dockerfile
+    container_name: taskmanagement-service
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Docker
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=TaskManagementDb;User Id=sa;Password=YourStrong@Passw0rd123;TrustServerCertificate=True
+      - RabbitMQ__HostName=rabbitmq
+    depends_on:
+      - sqlserver
+      - rabbitmq
+    networks:
+      - taskmanagement-network
+
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: taskmanagement-sqlserver

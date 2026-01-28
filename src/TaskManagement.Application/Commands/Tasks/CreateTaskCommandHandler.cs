@@ -21,8 +21,8 @@ public class CreateTaskCommandHandler : IRequestHandler<CreateTaskCommand, TaskD
     {
         var task = new Domain.Entities.Task
         {
-            Title = request.Task.Title,
-            Description = request.Task.Description,
+            Title = Common.InputSanitizer.Sanitize(request.Task.Title),
+            Description = Common.InputSanitizer.Sanitize(request.Task.Description),
             DueDate = request.Task.DueDate,
             Priority = request.Task.Priority,
             CreatedByUserId = request.Task.CreatedByUserId,
