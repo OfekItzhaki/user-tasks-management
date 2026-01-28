@@ -29,7 +29,7 @@ export default defineConfig({
       },
     },
   },
-  // @ts-ignore - vitest types
+  // @ts-expect-error - vitest types
   test: {
     globals: true,
     environment: 'jsdom',
