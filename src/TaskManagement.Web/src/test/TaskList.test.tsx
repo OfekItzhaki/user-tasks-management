@@ -63,7 +63,7 @@ describe('TaskList', () => {
     expect(onEdit).toHaveBeenCalledWith(mockTasks[0]);
   });
 
-  it('calls onDelete when delete button is clicked', async () => {
+  it('calls onDelete when delete button is clicked and confirmed', async () => {
     const user = userEvent.setup();
     const onEdit = vi.fn();
     const onDelete = vi.fn();
@@ -76,10 +76,14 @@ describe('TaskList', () => {
       />
     );
 
-    const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
+    // Find and click the delete button (trash icon) for the first task
+    // The delete button has title="Delete task" but no accessible name, so we use getAllByTitle
+    const deleteButtons = screen.getAllByTitle('Delete task');
     await user.click(deleteButtons[0]);
 
-    await user.click(screen.getByRole('button', { name: /delete/i }));
+    // Wait for confirm dialog and click the confirm button
+    const confirmButton = await screen.findByRole('button', { name: /^delete$/i });
+    await user.click(confirmButton);
 
     expect(onDelete).toHaveBeenCalledWith(mockTasks[0].id);
   });

@@ -61,7 +61,11 @@ describe('Security Utilities', () => {
     });
 
     it('removes dangerous input', () => {
-      expect(sanitizeAndValidate('<script>alert("xss")</script>')).toBe('');
+      // sanitizeAndValidate encodes HTML and returns empty if dangerous patterns detected
+      // The function first checks isSafeString, which detects script tags and returns false
+      // Then it returns empty string
+      const result = sanitizeAndValidate('<script>alert("xss")</script>');
+      expect(result).toBe('');
     });
 
     it('handles null and undefined', () => {

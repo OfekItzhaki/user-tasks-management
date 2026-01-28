@@ -58,12 +58,12 @@ export function isSafeString(input: string | null | undefined): boolean {
 export function sanitizeAndValidate(input: string | null | undefined): string {
   if (!input) return '';
   
-  const sanitized = sanitizeInput(input);
-  
-  if (!isSafeString(sanitized)) {
+  // Check if input is safe first (before encoding)
+  if (!isSafeString(input)) {
     console.warn('Potentially dangerous input detected and removed');
     return '';
   }
   
-  return sanitized;
+  // If safe, sanitize (encode HTML)
+  return sanitizeInput(input);
 }
