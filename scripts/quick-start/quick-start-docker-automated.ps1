@@ -86,26 +86,10 @@ if (-not $prerequisitesOk) {
 # Function to check if Docker Desktop is running
 function Test-DockerRunning {
     try {
-        # Use a simple timeout approach - run docker ps with a timeout
-        # This prevents hanging when Docker Desktop is starting but daemon isn't ready
-        $job = Start-Job -ScriptBlock {
-            docker ps 2>&1 | Out-Null
-            return $LASTEXITCODE
-        }
-        
-        # Wait max 1 second for response (if Docker is ready, it responds instantly)
-        $completed = Wait-Job -Job $job -Timeout 1
-        
-        if ($completed) {
-            $result = Receive-Job -Job $job
-            Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
-            return $result -eq 0
-        } else {
-            # Timeout - Docker daemon not ready yet
-            Stop-Job -Job $job -ErrorAction SilentlyContinue
-            Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
-            return $false
-        }
+        # Simple check - same as fix-docker.ps1 (which works reliably)
+        # docker ps is fast when Docker is ready, and fails quickly when it's not
+        $null = docker ps 2>&1 | Out-Null
+        return $LASTEXITCODE -eq 0
     } catch {
         return $false
     }
