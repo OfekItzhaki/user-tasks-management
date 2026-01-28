@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useAppDispatch, useAppSelector } from './store/hooks';
 import { 
@@ -24,6 +24,7 @@ import { TaskForm } from './components/TaskForm';
 import { TaskFilters } from './components/TaskFilters';
 import FloatingActionButton from './components/FloatingActionButton';
 import ErrorFallback from './components/ErrorFallback';
+import VersionFooter from './components/VersionFooter';
 import { CreateTaskDto, UpdateTaskDto, Task } from './types';
 import { useArrayKey } from './hooks/useArrayKey';
 
@@ -32,7 +33,6 @@ function App() {
   const tasks = useAppSelector((state) => state.tasks.tasks);
   const loading = useAppSelector((state) => state.tasks.loading);
   const error = useAppSelector((state) => state.tasks.error);
-  const selectedTask = useAppSelector((state) => state.tasks.selectedTask);
   const pagination = useAppSelector((state) => state.tasks.pagination);
   const tagIds = useAppSelector((state) => state.tasks.filters.tagIds) ?? [];
   const priorities = useAppSelector((state) => state.tasks.filters.priorities) ?? [];
@@ -116,10 +116,11 @@ function App() {
       setEditingTask(null);
       setShowForm(false);
       dispatch(fetchTasks());
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to update task:', err);
       // Handle concurrency errors
-      if (err?.message?.includes('modified by another user') || err?.response?.data?.includes('modified')) {
+      const error = err as { message?: string; response?: { data?: string } };
+      if (error?.message?.includes('modified by another user') || error?.response?.data?.includes('modified')) {
         alert('This task has been modified by another user. Please refresh and try again.');
         dispatch(fetchTasks()); // Refresh the task list
       }
@@ -256,6 +257,8 @@ function App() {
             ariaLabel="Create New Task"
           />
         )}
+
+        <VersionFooter />
       </div>
     </ErrorBoundary>
   );

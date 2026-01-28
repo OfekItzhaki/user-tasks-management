@@ -19,8 +19,9 @@ export const fetchUsers = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       return await userApi.getAll();
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch users');
+    } catch (error: unknown) {
+      const apiError = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue(apiError?.response?.data?.message || 'Failed to fetch users');
     }
   }
 );

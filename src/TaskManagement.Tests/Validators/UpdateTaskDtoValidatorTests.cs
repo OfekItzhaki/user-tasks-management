@@ -20,7 +20,6 @@ public class UpdateTaskDtoValidatorTests
     {
         var task = new UpdateTaskDto
         {
-            Id = 1,
             Title = "Test Task",
             Description = "Test Description",
             DueDate = DateTime.Today.AddDays(1),
@@ -39,7 +38,6 @@ public class UpdateTaskDtoValidatorTests
     {
         var task = new UpdateTaskDto
         {
-            Id = 1,
             Title = "",
             Description = "Test Description",
             DueDate = DateTime.Today.AddDays(1),
@@ -59,7 +57,6 @@ public class UpdateTaskDtoValidatorTests
     {
         var task = new UpdateTaskDto
         {
-            Id = 1,
             Title = "Test Task",
             Description = "Test Description",
             DueDate = DateTime.Today.AddDays(1),

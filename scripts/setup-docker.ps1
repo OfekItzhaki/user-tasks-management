@@ -107,8 +107,13 @@ Write-Host ""
 # Use docker compose (newer) or docker-compose (older)
 $composeCommand = if (Test-Command "docker compose") { "docker compose" } else { "docker-compose" }
 
+$dockerComposePath = "docker\docker-compose.yml"
 try {
-    & $composeCommand.Split(' ') up -d
+    if ($composeCommand -eq "docker compose") {
+        docker compose -f $dockerComposePath up -d
+    } else {
+        docker-compose -f $dockerComposePath up -d
+    }
     if ($LASTEXITCODE -ne 0) {
         Write-Host "✗ Failed to start Docker services" -ForegroundColor Red
         exit 1

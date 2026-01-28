@@ -46,7 +46,8 @@ const initialState: TaskState = {
 
 export const fetchTasks = createAsyncThunk(
   'tasks/fetchAll',
-  async (params?: GetTasksParams, { getState }) => {
+  async (params: GetTasksParams | undefined, thunkAPI) => {
+    const { getState } = thunkAPI;
     const state = getState() as { tasks: TaskState };
     const { pagination, filters } = state.tasks;
     

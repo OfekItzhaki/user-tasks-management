@@ -36,11 +36,4 @@ builder.Services.AddHostedService<TaskReminderService>();
 
 var host = builder.Build();
 
-Console.WriteLine("========================================");
-Console.WriteLine("Task Reminder Windows Service");
-Console.WriteLine("========================================");
-Console.WriteLine("Service is starting...");
-Console.WriteLine("Logs will appear below:");
-Console.WriteLine("========================================\n");
-
 host.Run();

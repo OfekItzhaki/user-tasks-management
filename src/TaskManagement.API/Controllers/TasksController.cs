@@ -66,12 +66,6 @@ public class TasksController : ControllerBase
                 return BadRequest("All tag IDs must be greater than 0.");
             }
 
-            // Log received parameters for debugging (remove in production)
-            _logger.LogDebug("GetTasks called with parameters: Page={Page}, PageSize={PageSize}, TagIds=[{TagIds}], Priorities=[{Priorities}]",
-                page, pageSize,
-                tagIds != null ? string.Join(",", tagIds) : "null",
-                priorities != null ? string.Join(",", priorities) : "null");
-
             // Sanitize string inputs (trim whitespace, handle empty strings, prevent XSS)
             var sanitizedSearchTerm = string.IsNullOrWhiteSpace(searchTerm) 
                 ? null 
@@ -116,8 +110,8 @@ public class TasksController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving tasks");
-            return StatusCode(500, "An error occurred while retrieving tasks.");
+            _logger.LogError(ex, "Error retrieving tasks: {Message}\n{StackTrace}", ex.Message, ex.StackTrace);
+            return StatusCode(500, $"An error occurred while retrieving tasks. Error: {ex.Message}");
         }
     }
 
