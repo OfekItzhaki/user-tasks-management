@@ -211,25 +211,43 @@ if (-not (Test-DockerRunning)) {
     $dockerProcess = Get-Process -Name "Docker Desktop" -ErrorAction SilentlyContinue
     if ($dockerProcess) {
         Write-Host "Docker Desktop process detected but not ready yet..." -ForegroundColor Yellow
-        Write-Host "Waiting for Docker Desktop to be ready (up to 60 seconds)..." -ForegroundColor Yellow
+        Write-Host "Waiting for Docker Desktop to be ready (up to 90 seconds)..." -ForegroundColor Yellow
+        Write-Host "  Docker Desktop can take time to fully initialize, especially after updates" -ForegroundColor Gray
         Write-Host ""
         
-        $maxWait = 60 # 1 minute max wait
+        $maxWait = 90 # 1.5 minutes max wait (increased for slower systems)
         $waited = 0
-        $checkInterval = 2 # Check every 2 seconds (faster detection)
+        $checkInterval = 3 # Check every 3 seconds (balance between speed and resource usage)
         
         while (-not (Test-DockerRunning) -and $waited -lt $maxWait) {
             Start-Sleep -Seconds $checkInterval
             $waited += $checkInterval
-            if ($waited % 10 -eq 0) {
+            if ($waited % 15 -eq 0) {
                 Write-Host "  Still waiting... ($waited seconds)" -ForegroundColor Gray
+                # Check if Docker Desktop process is still running
+                $stillRunning = Get-Process -Name "Docker Desktop" -ErrorAction SilentlyContinue
+                if (-not $stillRunning) {
+                    Write-Host "  [!] Docker Desktop process disappeared - it may have crashed" -ForegroundColor Yellow
+                    Write-Host "  Attempting to restart..." -ForegroundColor Yellow
+                    Start-DockerDesktop
+                    $waited = 0 # Reset wait counter after restart
+                }
             }
         }
         
         if (-not (Test-DockerRunning)) {
+            Write-Host ""
             Write-Host "[X] Docker Desktop is running but not responding after $maxWait seconds" -ForegroundColor Red
-            Write-Host "Please check Docker Desktop for errors and try again." -ForegroundColor Yellow
-            Write-Host "You can also try restarting Docker Desktop manually." -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "Troubleshooting steps:" -ForegroundColor Yellow
+            Write-Host "  1. Check Docker Desktop window for error messages" -ForegroundColor White
+            Write-Host "  2. Try restarting Docker Desktop manually" -ForegroundColor White
+            Write-Host "  3. Check if WSL 2 is installed and configured" -ForegroundColor White
+            Write-Host "  4. Ensure virtualization is enabled in BIOS" -ForegroundColor White
+            Write-Host "  5. Try: docker version (in a separate terminal to test)" -ForegroundColor White
+            Write-Host ""
+            Write-Host "You can continue without Docker (using LocalDB instead) by running:" -ForegroundColor Cyan
+            Write-Host "  .\scripts\quick-start\quick-start-local-automated.ps1" -ForegroundColor White
             exit 1
         }
         Write-Host "[OK] Docker Desktop is now ready!" -ForegroundColor Green
