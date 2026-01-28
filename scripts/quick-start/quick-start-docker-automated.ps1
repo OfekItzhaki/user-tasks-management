@@ -239,12 +239,17 @@ try {
     Write-Host "Pulling images and starting containers..." -ForegroundColor Gray
     Write-Host ""
     
+    # Run docker compose and capture output
     if ($composeCommand -eq "docker compose") {
-        docker compose -f $dockerComposePath up -d sqlserver rabbitmq
+        $dockerOutput = docker compose -f $dockerComposePath up -d sqlserver rabbitmq 2>&1
     } else {
-        docker-compose -f $dockerComposePath up -d sqlserver rabbitmq
+        $dockerOutput = docker-compose -f $dockerComposePath up -d sqlserver rabbitmq 2>&1
     }
     $dockerExitCode = $LASTEXITCODE
+    
+    # Show output to user (they can see pull progress)
+    $dockerOutput | ForEach-Object { Write-Host $_ -ForegroundColor Gray }
+    
     Pop-Location
     
     if ($dockerExitCode -ne 0) {
@@ -261,12 +266,14 @@ try {
             Write-Host "Retrying Docker services startup..." -ForegroundColor Yellow
             
             # Retry starting services
+            Write-Host "Pulling images and starting containers..." -ForegroundColor Gray
             Push-Location $projectRoot
             if ($composeCommand -eq "docker compose") {
-                docker compose -f $dockerComposePath up -d sqlserver rabbitmq 2>&1 | Out-String | Out-Null
+                $retryOutput = docker compose -f $dockerComposePath up -d sqlserver rabbitmq 2>&1
             } else {
-                docker-compose -f $dockerComposePath up -d sqlserver rabbitmq 2>&1 | Out-String | Out-Null
+                $retryOutput = docker-compose -f $dockerComposePath up -d sqlserver rabbitmq 2>&1
             }
+            $retryOutput | ForEach-Object { Write-Host $_ -ForegroundColor Gray }
             Pop-Location
             
             if ($LASTEXITCODE -ne 0) {
