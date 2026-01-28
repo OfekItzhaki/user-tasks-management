@@ -360,8 +360,32 @@ if ($dockerExitCode -ne 0) {
         }
     }
     Write-Host "[OK] Docker services started" -ForegroundColor Green
-    Write-Host "  Waiting for services to be ready..." -ForegroundColor Yellow
-    Start-Sleep -Seconds 15
+    Write-Host "  Waiting for SQL Server to be healthy (this may take up to 2 minutes)..." -ForegroundColor Yellow
+    
+    # Wait for SQL Server to be healthy
+    $maxWait = 120
+    $waited = 0
+    $checkInterval = 5
+    $sqlHealthy = $false
+    
+    while (-not $sqlHealthy -and $waited -lt $maxWait) {
+        Start-Sleep -Seconds $checkInterval
+        $waited += $checkInterval
+        
+        # Check SQL Server container health
+        $healthStatus = docker inspect --format='{{.State.Health.Status}}' taskmanagement-sqlserver 2>$null
+        if ($healthStatus -eq "healthy") {
+            $sqlHealthy = $true
+            Write-Host "  [OK] SQL Server is healthy" -ForegroundColor Green
+        } elseif ($waited % 15 -eq 0) {
+            Write-Host "  Still waiting... ($waited seconds)" -ForegroundColor Gray
+        }
+    }
+    
+    if (-not $sqlHealthy) {
+        Write-Host "  [!] Warning: SQL Server healthcheck timeout, but continuing..." -ForegroundColor Yellow
+        Write-Host "  Check SQL Server logs if you encounter database connection issues" -ForegroundColor Yellow
+    }
 
 Write-Host ""
 
