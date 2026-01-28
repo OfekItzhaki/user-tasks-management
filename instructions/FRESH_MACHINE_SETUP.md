@@ -122,7 +122,7 @@ After the quick-start script completes, verify:
 If something doesn't work:
 
 1. **Check prerequisites**: Run `.\scripts\verify-services.ps1`
-2. **See troubleshooting guide**: Read [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+2. **See troubleshooting guide**: Read [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
 3. **Check logs**: Look at the PowerShell windows for error messages
 
 ---
@@ -144,8 +144,8 @@ If something doesn't work:
 
 Once everything is running:
 - Read [ARCHITECTURE.md](ARCHITECTURE.md) to understand the project structure
-- Read [RUN.md](RUN.md) for daily usage instructions
-- Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md) if you encounter issues
+- Read [RUN.md](./RUN.md) for daily usage instructions
+- Check [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) if you encounter issues
 
 ---
 

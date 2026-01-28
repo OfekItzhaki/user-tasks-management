@@ -58,4 +58,4 @@ Checks if SQL Server, RabbitMQ, and services are running.
 
 ## Troubleshooting
 
-If something doesn't work, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+If something doesn't work, see [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).

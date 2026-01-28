@@ -68,4 +68,4 @@ npm --version       # Should show 10.x or 11.x
 
 ## Next Steps
 
-After installation, see [RUN.md](RUN.md) to start the application.
+After installation, see [RUN.md](./RUN.md) to start the application.
