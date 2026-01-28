@@ -84,8 +84,63 @@ $rabbitmqRunning = Test-Port -Port 5672
 if ($rabbitmqRunning) {
     Write-Host "[OK] RabbitMQ: Running on port 5672" -ForegroundColor Green
 } else {
-    Write-Host "[!] RabbitMQ: Not running (Windows Service will work but won't process reminders)" -ForegroundColor Yellow
-    Write-Host "  Start with: docker compose up -d rabbitmq" -ForegroundColor Cyan
+    Write-Host "[!] RabbitMQ: Not running - attempting to start automatically..." -ForegroundColor Yellow
+    
+    # Try to start RabbitMQ using Docker Compose
+    $projectRoot = Split-Path $PSScriptRoot -Parent
+    $dockerComposePath = Join-Path $projectRoot "docker\docker-compose.yml"
+    
+    if (Test-Path $dockerComposePath) {
+        Write-Host "  Starting RabbitMQ container..." -ForegroundColor Gray
+        Push-Location $projectRoot
+        try {
+            # Check if docker compose or docker-compose is available
+            $composeCommand = if (Get-Command "docker" -ErrorAction SilentlyContinue) {
+                if (docker compose version 2>&1 | Out-Null; $LASTEXITCODE -eq 0) {
+                    "docker compose"
+                } else {
+                    "docker-compose"
+                }
+            } else {
+                $null
+            }
+            
+            if ($composeCommand) {
+                if ($composeCommand -eq "docker compose") {
+                    docker compose -f $dockerComposePath --project-directory $projectRoot up -d rabbitmq 2>&1 | Out-Null
+                } else {
+                    docker-compose -f $dockerComposePath --project-directory $projectRoot up -d rabbitmq 2>&1 | Out-Null
+                }
+                
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "  Waiting for RabbitMQ to be ready..." -ForegroundColor Gray
+                    Start-Sleep -Seconds 5
+                    
+                    # Verify it's running
+                    $rabbitmqRunning = Test-Port -Port 5672
+                    if ($rabbitmqRunning) {
+                        Write-Host "[OK] RabbitMQ: Started and running on port 5672" -ForegroundColor Green
+                    } else {
+                        Write-Host "[!] RabbitMQ: Container started but not responding yet" -ForegroundColor Yellow
+                    }
+                } else {
+                    Write-Host "[!] RabbitMQ: Failed to start container" -ForegroundColor Yellow
+                    Write-Host "  You can start it manually: docker compose -f $dockerComposePath up -d rabbitmq" -ForegroundColor Cyan
+                }
+            } else {
+                Write-Host "[!] Docker not found - cannot start RabbitMQ automatically" -ForegroundColor Yellow
+                Write-Host "  Start with: docker compose up -d rabbitmq" -ForegroundColor Cyan
+            }
+        } catch {
+            Write-Host "[!] Error starting RabbitMQ: $_" -ForegroundColor Yellow
+            Write-Host "  You can start it manually: docker compose -f $dockerComposePath up -d rabbitmq" -ForegroundColor Cyan
+        } finally {
+            Pop-Location
+        }
+    } else {
+        Write-Host "[!] Docker Compose file not found - cannot start RabbitMQ automatically" -ForegroundColor Yellow
+        Write-Host "  Start with: docker compose up -d rabbitmq" -ForegroundColor Cyan
+    }
 }
 
 Write-Host ""
