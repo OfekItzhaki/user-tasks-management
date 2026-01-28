@@ -235,6 +235,22 @@ $projectRoot = Join-Path $PSScriptRoot "..\.."
 $dockerComposePath = Join-Path $projectRoot "docker\docker-compose.yml"
 
 Write-Host "Starting Docker services (this may take a few minutes on first run)..." -ForegroundColor Yellow
+
+# Remove any existing containers to avoid name conflicts
+Write-Host "Cleaning up any existing containers..." -ForegroundColor Gray
+Push-Location $projectRoot
+try {
+    # Stop and remove existing containers (ignore errors if none exist)
+    if ($composeCommand -eq "docker compose") {
+        docker compose -f $dockerComposePath --project-directory $projectRoot down 2>&1 | Out-Null
+    } else {
+        docker-compose -f $dockerComposePath --project-directory $projectRoot down 2>&1 | Out-Null
+    }
+} catch {
+    # Ignore errors during cleanup - containers might not exist
+}
+Pop-Location
+
 Write-Host "Pulling images and starting containers..." -ForegroundColor Gray
 Write-Host ""
 
@@ -244,10 +260,11 @@ Push-Location $projectRoot
 try {
     # Run docker compose - let output show naturally
     # Use --project-directory to ensure build contexts resolve correctly
+    # Use --force-recreate to handle any remaining container conflicts
     if ($composeCommand -eq "docker compose") {
-        docker compose -f $dockerComposePath --project-directory $projectRoot up -d sqlserver rabbitmq
+        docker compose -f $dockerComposePath --project-directory $projectRoot up -d --force-recreate sqlserver rabbitmq
     } else {
-        docker-compose -f $dockerComposePath --project-directory $projectRoot up -d sqlserver rabbitmq
+        docker-compose -f $dockerComposePath --project-directory $projectRoot up -d --force-recreate sqlserver rabbitmq
     }
     $dockerExitCode = $LASTEXITCODE
 } catch {
@@ -277,9 +294,9 @@ if ($dockerExitCode -ne 0) {
             Push-Location $projectRoot
             try {
                 if ($composeCommand -eq "docker compose") {
-                    docker compose -f $dockerComposePath --project-directory $projectRoot up -d sqlserver rabbitmq
+                    docker compose -f $dockerComposePath --project-directory $projectRoot up -d --force-recreate sqlserver rabbitmq
                 } else {
-                    docker-compose -f $dockerComposePath --project-directory $projectRoot up -d sqlserver rabbitmq
+                    docker-compose -f $dockerComposePath --project-directory $projectRoot up -d --force-recreate sqlserver rabbitmq
                 }
                 $retryExitCode = $LASTEXITCODE
             } catch {
