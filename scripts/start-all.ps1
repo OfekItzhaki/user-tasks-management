@@ -145,9 +145,9 @@ Write-Host "Services Starting..." -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Services are starting in separate windows:" -ForegroundColor Yellow
-Write-Host "  • API: http://localhost:5063 (Swagger: http://localhost:5063/swagger)" -ForegroundColor White
-Write-Host "  • Frontend: http://localhost:5173" -ForegroundColor White
-Write-Host "  • Windows Service: Console window (checking for overdue tasks)" -ForegroundColor White
+Write-Host "  - API: http://localhost:5063 (Swagger: http://localhost:5063/swagger)" -ForegroundColor White
+Write-Host "  - Frontend: http://localhost:5173" -ForegroundColor White
+Write-Host "  - Windows Service: Console window (checking for overdue tasks)" -ForegroundColor White
 Write-Host ""
 Write-Host "Waiting for services to be ready..." -ForegroundColor Yellow
 Write-Host ""
@@ -189,8 +189,8 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Quick Actions" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "• Open Frontend: http://localhost:5173" -ForegroundColor Cyan
-Write-Host "• Open API Swagger: http://localhost:5063/swagger" -ForegroundColor Cyan
-Write-Host "• Stop all services: Close the PowerShell windows" -ForegroundColor Cyan
-Write-Host "• Start RabbitMQ: docker compose up -d rabbitmq" -ForegroundColor Cyan
+Write-Host "- Open Frontend: http://localhost:5173" -ForegroundColor Cyan
+Write-Host "- Open API Swagger: http://localhost:5063/swagger" -ForegroundColor Cyan
+Write-Host "- Stop all services: Close the PowerShell windows" -ForegroundColor Cyan
+Write-Host "- Start RabbitMQ: docker compose up -d rabbitmq" -ForegroundColor Cyan
 Write-Host ""

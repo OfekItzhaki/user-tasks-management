@@ -176,7 +176,7 @@ Write-Host "All steps completed!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Access points:" -ForegroundColor Cyan
-Write-Host "  • Frontend: http://localhost:5173" -ForegroundColor White
-Write-Host "  • API Swagger: http://localhost:5063/swagger" -ForegroundColor White
-Write-Host "  • RabbitMQ Management: http://localhost:15672 (guest/guest)" -ForegroundColor White
+Write-Host "  - Frontend: http://localhost:5173" -ForegroundColor White
+Write-Host "  - API Swagger: http://localhost:5063/swagger" -ForegroundColor White
+Write-Host "  - RabbitMQ Management: http://localhost:15672 (guest/guest)" -ForegroundColor White
 Write-Host ""

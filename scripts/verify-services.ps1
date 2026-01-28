@@ -141,7 +141,7 @@ Write-Host "Verification Complete" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Quick Actions:" -ForegroundColor Yellow
-Write-Host "  • Open RabbitMQ Management UI: http://localhost:15672 (guest/guest)" -ForegroundColor Cyan
-Write-Host "  • Start Windows Service: cd src\TaskManagement.WindowsService && dotnet run" -ForegroundColor Cyan
-Write-Host "  • Start RabbitMQ: docker compose up -d rabbitmq" -ForegroundColor Cyan
+Write-Host "  - Open RabbitMQ Management UI: http://localhost:15672 (guest/guest)" -ForegroundColor Cyan
+Write-Host "  - Start Windows Service: cd src\TaskManagement.WindowsService && dotnet run" -ForegroundColor Cyan
+Write-Host "  - Start RabbitMQ: docker compose up -d rabbitmq" -ForegroundColor Cyan
 Write-Host ""

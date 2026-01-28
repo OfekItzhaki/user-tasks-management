@@ -222,13 +222,13 @@ Write-Host "All done! Services are starting..." -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Access points:" -ForegroundColor Cyan
-Write-Host "  • Frontend: http://localhost:5173" -ForegroundColor White
-Write-Host "  • API Swagger: http://localhost:5063/swagger" -ForegroundColor White
+Write-Host "  - Frontend: http://localhost:5173" -ForegroundColor White
+Write-Host "  - API Swagger: http://localhost:5063/swagger" -ForegroundColor White
 Write-Host ""
 Write-Host "Installation verified:" -ForegroundColor Cyan
-Write-Host "  • .NET SDK: $dotnetVersion" -ForegroundColor White
-Write-Host "  • Node.js: $nodeVersion" -ForegroundColor White
-Write-Host "  • npm: $npmVersion" -ForegroundColor White
+Write-Host "  - .NET SDK: $dotnetVersion" -ForegroundColor White
+Write-Host "  - Node.js: $nodeVersion" -ForegroundColor White
+Write-Host "  - npm: $npmVersion" -ForegroundColor White
 Write-Host ""
 Write-Host "Note: RabbitMQ is optional. Windows Service will work without it." -ForegroundColor Yellow
 Write-Host ""
