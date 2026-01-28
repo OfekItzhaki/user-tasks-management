@@ -366,6 +366,23 @@ Write-Host ""
 
 # Run migrations
 Write-Host "Running database migrations..." -ForegroundColor Yellow
+
+# Stop any running TaskManagement processes that might lock DLL files
+Write-Host "  Stopping any running TaskManagement processes..." -ForegroundColor Gray
+$runningProcesses = Get-Process | Where-Object {
+    $_.ProcessName -like "*TaskManagement*" -or
+    ($_.ProcessName -eq "dotnet" -and $_.Path -like "*TaskManagement*")
+}
+
+if ($runningProcesses) {
+    Write-Host "  Found $($runningProcesses.Count) running process(es), stopping them..." -ForegroundColor Yellow
+    $runningProcesses | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 3 # Give processes time to release file locks
+    Write-Host "  [OK] Stopped running processes" -ForegroundColor Green
+} else {
+    Write-Host "  [OK] No running processes found" -ForegroundColor Green
+}
+
 $originalLocation = Get-Location
 Set-Location $apiPath
 try {
