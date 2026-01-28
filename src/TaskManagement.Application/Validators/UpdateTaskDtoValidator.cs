@@ -16,8 +16,7 @@ public class UpdateTaskDtoValidator : AbstractValidator<UpdateTaskDto>
             .MaximumLength(1000).WithMessage("Description must not exceed 1000 characters.");
 
         RuleFor(x => x.DueDate)
-            .NotEmpty().WithMessage("Due date is required.")
-            .Must(BeTodayOrFuture).WithMessage("Due date must be today or in the future.");
+            .NotEmpty().WithMessage("Due date is required.");
 
         RuleFor(x => x.Priority)
             .IsInEnum().WithMessage("Priority must be a valid value.");

@@ -230,8 +230,8 @@ public class TasksController : ControllerBase
         }
         catch (FluentValidation.ValidationException ex)
         {
-            _logger.LogWarning(ex, "Validation error updating task {TaskId}", id);
-            return BadRequest(ex.Errors);
+            _logger.LogWarning(ex, "Validation error updating task {TaskId}: {Errors}", id, string.Join("; ", ex.Errors.Select(e => e.ErrorMessage)));
+            return BadRequest(new { errors = ex.Errors.Select(e => new { property = e.PropertyName, message = e.ErrorMessage }) });
         }
         catch (Exception ex)
         {
