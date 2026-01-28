@@ -538,18 +538,24 @@ if (-not (Test-Path $apiPath)) {
 Write-Host "Waiting for SQL Server to be fully ready..." -ForegroundColor Yellow
 Start-Sleep -Seconds 10
 
-# Update connection string to use Docker SQL Server
-$appsettingsPath = "$apiPath\appsettings.json"
+# Update connection string to use Docker SQL Server (both appsettings.json and appsettings.Development.json)
 $dockerConnectionString = "Server=localhost,1433;Database=TaskManagementDb;User Id=sa;Password=YourStrong@Passw0rd123;TrustServerCertificate=True;MultipleActiveResultSets=true"
 
-if (Test-Path $appsettingsPath) {
-    $appsettingsContent = Get-Content $appsettingsPath -Raw
-    # Check if connection string needs updating
-    if ($appsettingsContent -notmatch "Server=localhost,1433") {
-        Write-Host "Updating API connection string for Docker SQL Server..." -ForegroundColor Yellow
-        $appsettingsContent = $appsettingsContent -replace '(?s)"ConnectionStrings":\s*\{[^}]*"DefaultConnection":\s*"[^"]*"', "`"ConnectionStrings`": {`n    `"DefaultConnection`": `"$dockerConnectionString`""
-        Set-Content -Path $appsettingsPath -Value $appsettingsContent -NoNewline
-        Write-Host "[OK] API connection string updated" -ForegroundColor Green
+$apiAppsettingsPaths = @(
+    "$apiPath\appsettings.json",
+    "$apiPath\appsettings.Development.json"
+)
+
+foreach ($appsettingsPath in $apiAppsettingsPaths) {
+    if (Test-Path $appsettingsPath) {
+        $appsettingsContent = Get-Content $appsettingsPath -Raw
+        # Check if connection string needs updating
+        if ($appsettingsContent -notmatch "Server=localhost,1433") {
+            Write-Host "Updating API connection string for Docker SQL Server: $(Split-Path $appsettingsPath -Leaf)..." -ForegroundColor Yellow
+            $appsettingsContent = $appsettingsContent -replace '(?s)"ConnectionStrings":\s*\{[^}]*"DefaultConnection":\s*"[^"]*"', "`"ConnectionStrings`": {`n    `"DefaultConnection`": `"$dockerConnectionString`""
+            Set-Content -Path $appsettingsPath -Value $appsettingsContent -NoNewline
+            Write-Host "[OK] API connection string updated: $(Split-Path $appsettingsPath -Leaf)" -ForegroundColor Green
+        }
     }
 }
 
