@@ -66,7 +66,6 @@ export const TaskForm: React.FC<TaskFormProps> = ({
   };
 
   const onSubmitHandler = (data: CreateTaskDto) => {
-    // Ensure createdByUserId is set if not already set
     if (!data.createdByUserId || data.createdByUserId === 0) {
       if (data.userIds && data.userIds.length > 0) {
         data.createdByUserId = data.userIds[0];
@@ -75,7 +74,6 @@ export const TaskForm: React.FC<TaskFormProps> = ({
         return;
       }
     }
-    // Priority is already set from the form
     onSubmit(data);
   };
 

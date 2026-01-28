@@ -10,7 +10,7 @@ const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
   paramsSerializer: {
-    indexes: null, // Use '?tagIds=1&tagIds=2' format instead of '?tagIds[]=1&tagIds[]=2'
+    indexes: null,
   },
 });
 
@@ -25,25 +25,18 @@ apiClient.interceptors.response.use(
 
 export const taskApi = {
   getAll: async (params?: GetTasksParams): Promise<PagedResult<Task>> => {
-    // Build query params - ensure arrays are properly formatted for ASP.NET Core
     const queryParams: any = { ...params };
     
-    // Remove undefined/null values (but keep empty arrays as they might be intentional)
     Object.keys(queryParams).forEach(key => {
       const value = queryParams[key];
-      // Remove undefined/null, but keep empty arrays and empty strings
       if (value === undefined || value === null) {
         delete queryParams[key];
       }
-      // Remove empty arrays - they should be undefined instead
       if (Array.isArray(value) && value.length === 0) {
         delete queryParams[key];
       }
     });
     
-    // Arrays will be serialized as ?tagIds=1&tagIds=2 by paramsSerializer config
-    // The paramsSerializer: { indexes: null } ensures format: ?tagIds=1&tagIds=2
-    // instead of ?tagIds[]=1&tagIds[]=2 which ASP.NET Core doesn't bind by default
     const response = await apiClient.get<PagedResult<Task>>('/tasks', { 
       params: queryParams,
     });

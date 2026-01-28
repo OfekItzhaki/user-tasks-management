@@ -24,7 +24,6 @@ public class GetTasksQueryHandler : IRequestHandler<GetTasksQuery, PagedResult<T
                 .ThenInclude(tt => tt.Tag)
             .AsQueryable();
 
-        // Search filter
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
         {
             var searchTerm = request.SearchTerm.ToLower();
@@ -33,34 +32,24 @@ public class GetTasksQueryHandler : IRequestHandler<GetTasksQuery, PagedResult<T
                 t.Description.ToLower().Contains(searchTerm));
         }
 
-        // Priority filter - multiple priorities only
-        // Note: A task can only have ONE priority, so we use OR logic (task has ANY of the selected priorities)
-        // This is different from tags where a task can have MULTIPLE tags, so we use AND logic (task has ALL selected tags)
         if (request.Priorities != null && request.Priorities.Count > 0)
         {
             var priorityValues = request.Priorities.Select(p => (Domain.Enums.Priority)p).ToList();
             query = query.Where(t => priorityValues.Contains(t.Priority));
         }
 
-        // User filter
         if (request.UserId.HasValue)
         {
             query = query.Where(t => t.UserTasks.Any(ut => ut.UserId == request.UserId.Value));
         }
 
-        // Tag filter - multiple tags only
-        // Task must have ALL selected tags (AND logic, not OR)
-        // We ensure the task has all selected tags by checking that the count of matching tags equals the count of requested tags
         if (request.TagIds != null && request.TagIds.Count > 0)
         {
             var tagIdsList = request.TagIds.ToList();
             query = query.Where(t => t.TaskTags.Count(tt => tagIdsList.Contains(tt.TagId)) == tagIdsList.Count);
         }
 
-        // Get total count before pagination
         var totalCount = await query.CountAsync(cancellationToken);
-
-        // Sorting
         query = request.SortBy?.ToLower() switch
         {
             "title" => request.SortOrder?.ToLower() == "asc" 
@@ -77,7 +66,6 @@ public class GetTasksQueryHandler : IRequestHandler<GetTasksQuery, PagedResult<T
                 : query.OrderByDescending(t => t.CreatedAt)
         };
 
-        // Pagination - ensure valid values
         var page = Math.Max(1, request.Page);
         var pageSize = Math.Max(1, request.PageSize);
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Tag } from '../types';
+import { useTagSelector } from '../hooks/useTagSelector';
 
 interface TagSelectorProps {
   tags: Tag[];
@@ -17,24 +18,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
   variant = 'chips',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
+  const dropdownRef = useTagSelector(isOpen, () => setIsOpen(false));
 
   const handleTagToggle = (tagId: number) => {
     if (multiple) {
@@ -61,7 +45,6 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
     return `${selectedTagIds.length} tags selected`;
   };
 
-  // Dropdown variant for filtering
   if (variant === 'dropdown') {
     return (
       <div className="relative" ref={dropdownRef} style={{ zIndex: 1000 }}>
@@ -87,7 +70,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
           </svg>
         </button>
         {isOpen && tags.length > 0 && (
-          <div className="absolute w-full mt-1 glass-card border rounded-lg shadow-lg max-h-60 overflow-auto z-[1001]">
+          <div className="absolute w-full mt-1 glass-card border-2 border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-auto z-[1001]">
             {tags.map((tag) => {
               const isSelected = selectedTagIds.includes(tag.id);
               return (
@@ -133,14 +116,12 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
     );
   }
 
-  // Chip-based variant for task form
   return (
     <div className="relative">
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
         Tags *
       </label>
       
-      {/* Chip-based selection - all tags visible as clickable chips */}
       <div className="flex flex-wrap gap-2">
         {tags.length === 0 ? (
           <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -163,14 +144,12 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                   }
                 `}
               >
-                {/* Checkmark icon for selected */}
                 {isSelected && (
                   <svg className="w-4 h-4 text-gray-700 dark:text-primary-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 )}
                 
-                {/* Tag color dot */}
                 {tag.color && (
                   <span
                     className="w-3 h-3 rounded-full"
@@ -178,7 +157,6 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                   />
                 )}
                 
-                {/* Tag name */}
                 <span className={isSelected ? 'text-gray-900 dark:text-primary-100 font-semibold' : 'text-gray-700 dark:text-gray-300'}>
                   {tag.name}
                 </span>
@@ -188,7 +166,6 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
         )}
       </div>
       
-      {/* Selected count display */}
       {selectedTagIds.length > 0 && (
         <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
           {selectedTagIds.length} tag{selectedTagIds.length > 1 ? 's' : ''} selected

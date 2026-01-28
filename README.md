@@ -94,16 +94,21 @@ The application follows **Clean Architecture** principles with **CQRS (Command Q
 
 ## Features
 
-- ✅ Full CRUD operations for tasks
-- ✅ User management with contact details (Full Name, Email, Telephone)
-- ✅ Multiple tags per task (N:N relationship)
-- ✅ Priority levels (Low, Medium, High, Critical)
-- ✅ Due date tracking
-- ✅ Comprehensive field validation (frontend and backend)
-- ✅ Responsive React UI
-- ✅ Windows Service for automated task reminders
-- ✅ RabbitMQ integration for message queuing
-- ✅ Unit and integration tests
+- ✅ **Full CRUD operations** for tasks (Create, Read, Update, Delete)
+- ✅ **User management** with contact details (Full Name, Email, Telephone)
+- ✅ **Multiple tags per task** (N:N relationship) with visual color coding
+- ✅ **Priority levels** (Low, Medium, High, Critical) with visual indicators
+- ✅ **Due date tracking** with validation
+- ✅ **Comprehensive validation** (frontend Yup + backend FluentValidation)
+- ✅ **Search & Filtering** by title, description, priority, user, tags
+- ✅ **Sorting** by title, due date, priority, creation date
+- ✅ **Pagination** for efficient data handling
+- ✅ **Responsive React UI** with dark mode support
+- ✅ **Windows Service** for automated task reminders
+- ✅ **RabbitMQ integration** for message queuing
+- ✅ **Unit and integration tests**
+- ✅ **Clean Architecture** with CQRS pattern
+- ✅ **Custom hooks** for reusable logic (React)
 
 ## Technology Stack
 
@@ -133,15 +138,24 @@ The application follows **Clean Architecture** principles with **CQRS (Command Q
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
+The setup script (`.\setup.ps1`) will check for these automatically, but if you're setting up manually, you'll need:
 
 1. **.NET 8.0 SDK** - [Download](https://dotnet.microsoft.com/download/dotnet/8.0)
-2. **SQL Server** (LocalDB or full instance)
-3. **Node.js 20+** and **npm** - [Download](https://nodejs.org/)
-4. **RabbitMQ Server** - [Download](https://www.rabbitmq.com/download.html)
+   - Verify: `dotnet --version` (should show 8.0.x)
+2. **SQL Server LocalDB** (recommended) or SQL Server Express
+   - Usually comes with Visual Studio
+   - Or download: [SQL Server Express](https://www.microsoft.com/sql-server/sql-server-downloads)
+   - Verify: `sqllocaldb info mssqllocaldb`
+3. **Node.js 20.19+ or 22.12+** and **npm** - [Download](https://nodejs.org/)
+   - Verify: `node --version` and `npm --version`
+4. **RabbitMQ** (optional, for Windows Service)
+   - **Recommended**: Use Docker: `docker run -d --hostname my-rabbit --name some-rabbit -p 5672:5672 -p 15672:15672 rabbitmq:3-management`
+   - Or install locally: [RabbitMQ Downloads](https://www.rabbitmq.com/download.html)
 5. **Visual Studio 2022** or **VS Code** (optional, for development)
 
 ## Setup Instructions
+
+> **💡 Tip**: If you're on a new machine, use the automated setup script: `.\setup.ps1` (see [Quick Start](#-quick-start) above)
 
 ### 1. Clone the Repository
 
@@ -182,9 +196,21 @@ dotnet ef migrations add InitialCreate --project ../TaskManagement.Infrastructur
 dotnet ef database update --project ../TaskManagement.Infrastructure
 ```
 
-### 3. Seed Initial Data (Optional)
+### 3. Seed Initial Data (Recommended)
 
-You can seed the database with sample users and tags. Create a seed script or use the API to create initial data.
+After starting the API, seed the database with sample users and tags:
+
+**Option 1: Using Swagger UI** (easiest)
+1. Navigate to: http://localhost:5063/swagger
+2. Find the `POST /api/seed` endpoint
+3. Click "Try it out" → "Execute"
+
+**Option 2: Using curl/PowerShell**
+```powershell
+Invoke-WebRequest -Uri "http://localhost:5063/api/seed" -Method POST
+```
+
+This will create sample users, tags, and tasks for testing.
 
 ### 4. RabbitMQ Setup
 
@@ -370,35 +396,75 @@ POST /api/tasks
 }
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
-### 🚀 For New Machines (Automated Setup)
+### For New Machines (First Time Setup)
 
-Run the setup script that handles everything:
+**The easiest way to get started** - Run the automated setup script:
 
 ```powershell
 .\setup.ps1
 ```
 
-This will:
-- ✅ Check prerequisites (.NET SDK, Node.js, SQL Server LocalDB)
-- ✅ Install missing tools (dotnet-ef)
-- ✅ Set up database (migrations)
-- ✅ Install frontend dependencies
-- ✅ Build the solution
-- ✅ Start all services
+This single command will:
+- ✅ **Check prerequisites** (.NET 8.0 SDK, Node.js 20+, SQL Server LocalDB)
+- ✅ **Install missing tools** (dotnet-ef tool automatically)
+- ✅ **Set up database** (create database and run migrations)
+- ✅ **Install frontend dependencies** (npm packages)
+- ✅ **Build the solution** (compile all projects)
+- ✅ **Start all services** (API, Frontend, Windows Service)
 
-### ⚡ For Existing Setup (Quick Run)
+**That's it!** The script handles everything automatically. After it completes, you'll have:
+- Frontend running at: http://localhost:5173
+- API Swagger at: http://localhost:5063/swagger
+- Windows Service running (Development or Production mode)
 
-If everything is already set up:
+### For Existing Setup (Quick Run)
+
+If everything is already set up, just start the services:
 
 ```powershell
 .\run.ps1
 ```
 
-### 📖 Manual Setup
+This will start all services without running setup checks.
 
-See [QUICK_START.md](QUICK_START.md) for detailed manual setup instructions.
+### 📖 Manual Setup (If Scripts Don't Work)
+
+If you prefer manual setup or the scripts don't work, follow these steps:
+
+1. **Install Prerequisites** (if not already installed):
+   - [.NET 8.0 SDK](https://dotnet.microsoft.com/download)
+   - [Node.js 20+](https://nodejs.org/)
+   - SQL Server LocalDB (comes with Visual Studio) or [SQL Server Express](https://www.microsoft.com/sql-server/sql-server-downloads)
+   - [RabbitMQ](https://www.rabbitmq.com/download.html) or use Docker: `docker run -d --hostname my-rabbit --name some-rabbit -p 5672:5672 -p 15672:15672 rabbitmq:3-management`
+
+2. **Install dotnet-ef tool**:
+   ```powershell
+   dotnet tool install --global dotnet-ef
+   ```
+
+3. **Set up Database**:
+   ```powershell
+   cd src\TaskManagement.API
+   dotnet ef database update --project ..\TaskManagement.Infrastructure
+   ```
+
+4. **Install Frontend Dependencies**:
+   ```powershell
+   cd src\TaskManagement.Web
+   npm install
+   ```
+
+5. **Build Solution**:
+   ```powershell
+   cd ..\..
+   dotnet build
+   ```
+
+6. **Start Services** (see [Running the Application](#running-the-application) section below)
+
+See [QUICK_START.md](QUICK_START.md) for more detailed manual setup instructions.
 
 ## Running the Application
 
@@ -611,25 +677,219 @@ UserTasks/
 
 ## Troubleshooting
 
-### Common Issues
+### Script Execution Policy Error
 
-1. **Database connection errors**:
-   - Verify SQL Server is running
-   - Check connection string in `appsettings.json`
-   - Ensure database exists or run migrations
+If you get: `cannot be loaded because running scripts is disabled on this system`
 
-2. **RabbitMQ connection errors**:
-   - Verify RabbitMQ is running: `docker ps` or check Windows services
-   - Check port 5672 is not blocked
-   - Verify hostname in configuration
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
 
-3. **CORS errors in browser**:
-   - Check CORS configuration in `Program.cs`
-   - Verify frontend URL is in allowed origins
+Then run `.\setup.ps1` again.
 
-4. **API not accessible from frontend**:
-   - Check API URL in `src/TaskManagement.Web/src/services/api.ts`
-   - Verify SSL certificate (may need to trust dev certificate)
+### Database Connection Errors
+
+**Problem**: Cannot connect to database
+
+**Solutions**:
+1. **Verify SQL Server LocalDB is running**:
+   ```powershell
+   sqllocaldb start mssqllocaldb
+   sqllocaldb info mssqllocaldb
+   ```
+
+2. **Check connection string** in `src/TaskManagement.API/appsettings.json`:
+   ```json
+   "ConnectionStrings": {
+     "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=TaskManagementDb;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True"
+   }
+   ```
+
+3. **Re-run migrations**:
+   ```powershell
+   cd src\TaskManagement.API
+   dotnet ef database update --project ..\TaskManagement.Infrastructure
+   ```
+
+### RabbitMQ Connection Errors
+
+**Problem**: Windows Service can't connect to RabbitMQ
+
+**Solutions**:
+1. **Check if RabbitMQ is running**:
+   ```powershell
+   docker ps --filter "name=rabbit"
+   ```
+
+2. **Start RabbitMQ Docker container**:
+   ```powershell
+   docker start some-rabbit
+   # Or create new container:
+   docker run -d --hostname my-rabbit --name some-rabbit -p 5672:5672 -p 15672:15672 rabbitmq:3-management
+   ```
+
+3. **Verify RabbitMQ Management UI**: http://localhost:15672 (guest/guest)
+
+4. **Check configuration** in `src/TaskManagement.WindowsService/appsettings.json`:
+   ```json
+   "RabbitMQ": {
+     "HostName": "localhost"
+   }
+   ```
+
+### Port Already in Use
+
+**Problem**: Port 5063 (API) or 5173 (Frontend) is already in use
+
+**Solutions**:
+1. **Find and stop the process using the port**:
+   ```powershell
+   # Find process on port 5063
+   netstat -ano | findstr :5063
+   # Kill the process (replace PID with actual process ID)
+   taskkill /PID <PID> /F
+   ```
+
+2. **Or change ports** in:
+   - API: `src/TaskManagement.API/Properties/launchSettings.json`
+   - Frontend: `src/TaskManagement.Web/vite.config.ts`
+
+### CORS Errors in Browser
+
+**Problem**: Frontend can't connect to API (CORS error)
+
+**Solutions**:
+1. **Check API is running**: http://localhost:5063/swagger
+2. **Verify CORS configuration** in `src/TaskManagement.API/Program.cs`
+3. **Check API URL** in `src/TaskManagement.Web/src/services/api.ts`:
+   ```typescript
+   const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'https://localhost:7000/api');
+   ```
+
+### SSL Certificate Errors
+
+**Problem**: Browser shows SSL certificate warning
+
+**Solutions**:
+1. **Trust development certificate**:
+   ```powershell
+   dotnet dev-certs https --trust
+   ```
+
+2. **Or use HTTP instead of HTTPS** (update API URL in frontend)
+
+### Windows Service Not Starting
+
+**Problem**: Windows Service fails to start
+
+**Solutions**:
+1. **Run in Development Mode** (console app) instead:
+   ```powershell
+   cd src\TaskManagement.WindowsService
+   dotnet run
+   ```
+
+2. **Check Event Viewer** for errors:
+   ```powershell
+   eventvwr.msc
+   # Navigate to: Windows Logs > Application
+   ```
+
+3. **Verify connection string** in `src/TaskManagement.WindowsService/appsettings.json`
+
+### Frontend Build Errors
+
+**Problem**: `npm install` or `npm run dev` fails
+
+**Solutions**:
+1. **Clear npm cache**:
+   ```powershell
+   npm cache clean --force
+   ```
+
+2. **Delete node_modules and reinstall**:
+   ```powershell
+   cd src\TaskManagement.Web
+   Remove-Item -Recurse -Force node_modules
+   Remove-Item package-lock.json
+   npm install
+   ```
+
+3. **Check Node.js version** (should be 20.19+ or 22.12+):
+   ```powershell
+   node --version
+   ```
+
+### Still Having Issues?
+
+1. **Check logs**:
+   - API: Check console output
+   - Frontend: Check browser console (F12)
+   - Windows Service: Check console or Event Viewer
+
+2. **Verify all prerequisites** are installed:
+   ```powershell
+   dotnet --version
+   node --version
+   npm --version
+   sqllocaldb info mssqllocaldb
+   ```
+
+3. **Try manual setup** (see [Manual Setup](#-manual-setup-if-scripts-dont-work) section)
+
+4. **Check GitHub Issues** or create a new issue with:
+   - Error messages
+   - Steps to reproduce
+   - Your environment (OS, .NET version, Node version)
+
+## Project Structure
+
+```
+UserTasks/
+├── src/
+│   ├── TaskManagement.API/          # REST API layer (.NET Core)
+│   ├── TaskManagement.Application/   # CQRS commands/queries (MediatR)
+│   ├── TaskManagement.Domain/        # Domain entities and enums
+│   ├── TaskManagement.Infrastructure/ # EF Core, RabbitMQ, Data access
+│   ├── TaskManagement.WindowsService/ # Background service for reminders
+│   ├── TaskManagement.Web/          # React frontend (TypeScript)
+│   └── TaskManagement.Tests/        # Unit & integration tests
+├── setup.ps1                        # Automated setup script (NEW MACHINES)
+├── run.ps1                          # Quick start script (EXISTING SETUP)
+├── README.md                        # This file
+├── QUICK_START.md                   # Detailed setup guide
+├── REQUIREMENTS_REVIEW.md           # Requirements compliance review
+└── PROJECT_RECOMMENDATIONS.md       # Future enhancement suggestions
+```
+
+## Getting Help
+
+### Documentation Files
+- **README.md** (this file) - Overview and quick start
+- **QUICK_START.md** - Detailed manual setup instructions
+- **REQUIREMENTS_REVIEW.md** - Requirements compliance checklist
+- **PROJECT_RECOMMENDATIONS.md** - Future enhancement suggestions
+- **SETUP_IMPROVEMENTS.md** - Setup automation improvements analysis
+
+### Common Commands
+
+```powershell
+# Automated setup (first time)
+.\setup.ps1
+
+# Quick start (existing setup)
+.\run.ps1
+
+# Database migrations
+cd src\TaskManagement.API
+dotnet ef database update --project ..\TaskManagement.Infrastructure
+
+# Run tests
+dotnet test
+
+# Build solution
+dotnet build
+```
 
 ## License
 
@@ -640,4 +900,4 @@ Ofek Itzhaki
 
 ---
 
-For questions or issues, please refer to the project documentation or create an issue in the repository.
+**Need help?** Check the [Troubleshooting](#troubleshooting) section above or refer to the project documentation files.

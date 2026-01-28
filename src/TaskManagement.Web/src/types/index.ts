@@ -59,7 +59,6 @@ export interface UpdateTaskDto {
   priority: Priority;
   userIds: number[];
   tagIds: number[];
-  // Note: createdByUserId is NOT included - it cannot be changed after creation
 }
 
 export interface PagedResult<T> {
@@ -74,9 +73,9 @@ export interface GetTasksParams {
   page?: number;
   pageSize?: number;
   searchTerm?: string;
-  priorities?: number[]; // Multiple priorities only
+  priorities?: number[];
   userId?: number;
-  tagIds?: number[]; // Multiple tags only
+  tagIds?: number[];
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }

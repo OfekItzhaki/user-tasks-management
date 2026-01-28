@@ -39,7 +39,6 @@ export const PrioritySelector: React.FC<PrioritySelectorProps> = ({
         Priority *
       </label>
       
-      {/* Chip-based selection - all priorities visible as clickable chips */}
       <div className="flex flex-wrap gap-2">
         {priorityOptions.map((option) => {
           const isSelected = selectedPriorities.includes(option.value);
@@ -58,14 +57,12 @@ export const PrioritySelector: React.FC<PrioritySelectorProps> = ({
                 }
               `}
             >
-              {/* Checkmark icon for selected */}
               {isSelected && (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               )}
               
-              {/* Priority label */}
               <span className={isSelected ? 'font-semibold' : ''}>
                 {option.label}
               </span>
@@ -74,7 +71,6 @@ export const PrioritySelector: React.FC<PrioritySelectorProps> = ({
         })}
       </div>
       
-      {/* Selected count display */}
       {selectedPriorities.length > 0 && (
         <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
           {selectedPriorities.length} priorit{selectedPriorities.length > 1 ? 'ies' : 'y'} selected

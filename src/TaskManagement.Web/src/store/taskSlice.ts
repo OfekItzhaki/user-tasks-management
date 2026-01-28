@@ -15,9 +15,9 @@ interface TaskState {
   };
   filters: {
     searchTerm?: string;
-    priorities?: number[]; // Multiple priorities only
+    priorities?: number[];
     userId?: number;
-    tagIds?: number[]; // Multiple tags only
+    tagIds?: number[];
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
   };
@@ -36,9 +36,9 @@ const initialState: TaskState = {
   },
   filters: {
     searchTerm: undefined,
-    priorities: [], // Initialize as empty array
-    userId: undefined,
-    tagIds: [], // Initialize as empty array
+        priorities: [],
+        userId: undefined,
+        tagIds: [],
     sortBy: 'createdAt',
     sortOrder: 'desc',
   },
@@ -50,12 +50,9 @@ export const fetchTasks = createAsyncThunk(
     const state = getState() as { tasks: TaskState };
     const { pagination, filters } = state.tasks;
     
-    // Validate and sanitize parameters
     const page = Math.max(1, params?.page ?? pagination.currentPage);
     const pageSize = Math.max(1, Math.min(1000, params?.pageSize ?? pagination.itemsPerPage));
     const searchTerm = params?.searchTerm?.trim() || filters.searchTerm?.trim() || undefined;
-    
-    // Filter out invalid IDs (negative or zero)
     const validPriorities = params?.priorities?.filter(p => p > 0 && p <= 4) || 
                            (filters.priorities && filters.priorities.length > 0 
                             ? filters.priorities.filter(p => p > 0 && p <= 4) 
@@ -111,26 +108,23 @@ const taskSlice = createSlice({
       state.error = null;
     },
     setCurrentPage: (state, action: PayloadAction<number>) => {
-      // Validate: page must be >= 1
       const page = Math.max(1, action.payload);
       state.pagination.currentPage = page;
     },
     setItemsPerPage: (state, action: PayloadAction<number>) => {
-      // Validate: pageSize must be >= 1 and <= 1000
       const pageSize = Math.max(1, Math.min(1000, action.payload));
       state.pagination.itemsPerPage = pageSize;
-      state.pagination.currentPage = 1; // Reset to first page when changing items per page
+      state.pagination.currentPage = 1;
     },
     setSearchTerm: (state, action: PayloadAction<string | undefined>) => {
       state.filters.searchTerm = action.payload;
-      state.pagination.currentPage = 1; // Reset to first page when searching
+      state.pagination.currentPage = 1;
     },
     setPrioritiesFilter: (state, action: PayloadAction<number[] | undefined>) => {
-      // Always create a new array reference to ensure React detects the change
       const newPriorities = action.payload && action.payload.length > 0 ? [...action.payload] : [];
       state.filters = {
         ...state.filters,
-        priorities: newPriorities, // Always set to array (never undefined)
+        priorities: newPriorities,
       };
       state.pagination.currentPage = 1;
     },
@@ -139,12 +133,10 @@ const taskSlice = createSlice({
       state.pagination.currentPage = 1;
     },
     setTagIdsFilter: (state, action: PayloadAction<number[] | undefined>) => {
-      // Always create a new array reference to ensure React detects the change
       const newTagIds = action.payload && action.payload.length > 0 ? [...action.payload] : [];
-      // Force Immer to create a new filters object by using spread operator
       state.filters = {
         ...state.filters,
-        tagIds: newTagIds, // Always set to array (never undefined)
+        tagIds: newTagIds,
       };
       state.pagination.currentPage = 1;
     },
@@ -155,12 +147,11 @@ const taskSlice = createSlice({
       state.filters.sortOrder = action.payload;
     },
     clearFilters: (state) => {
-      // Always create new array references to ensure React detects the change
       state.filters = {
         searchTerm: undefined,
-        priorities: [], // Reset to empty array (new reference)
+        priorities: [],
         userId: undefined,
-        tagIds: [], // Reset to empty array (new reference)
+        tagIds: [],
         sortBy: 'createdAt',
         sortOrder: 'desc',
       };
@@ -179,18 +170,14 @@ const taskSlice = createSlice({
         state.tasks = action.payload.items;
         state.pagination.totalItems = action.payload.totalCount;
         state.pagination.totalPages = action.payload.totalPages;
-        // Don't update currentPage/pageSize from response - they come from filters/request
-        // This prevents loops where response updates trigger another fetch
       })
       .addCase(fetchTasks.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || 'Failed to fetch tasks';
       })
-      // Fetch task by ID
       .addCase(fetchTaskById.fulfilled, (state, action) => {
         state.selectedTask = action.payload;
       })
-      // Create task
       .addCase(createTask.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -203,7 +190,6 @@ const taskSlice = createSlice({
         state.loading = false;
         state.error = action.error.message || 'Failed to create task';
       })
-      // Update task
       .addCase(updateTask.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -222,7 +208,6 @@ const taskSlice = createSlice({
         state.loading = false;
         state.error = action.error.message || 'Failed to update task';
       })
-      // Delete task
       .addCase(deleteTask.pending, (state) => {
         state.loading = true;
         state.error = null;

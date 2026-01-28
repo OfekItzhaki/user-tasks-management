@@ -1,7 +1,6 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useAppDispatch, useAppSelector } from './store/hooks';
-import { shallowEqual } from 'react-redux';
 import { 
   fetchTasks, 
   createTask, 
@@ -26,29 +25,23 @@ import { TaskFilters } from './components/TaskFilters';
 import FloatingActionButton from './components/FloatingActionButton';
 import ErrorFallback from './components/ErrorFallback';
 import { CreateTaskDto, UpdateTaskDto, Task } from './types';
+import { useArrayKey } from './hooks/useArrayKey';
 
 function App() {
   const dispatch = useAppDispatch();
-  // Select arrays directly to ensure React-Redux detects changes
   const tasks = useAppSelector((state) => state.tasks.tasks);
   const loading = useAppSelector((state) => state.tasks.loading);
   const error = useAppSelector((state) => state.tasks.error);
   const selectedTask = useAppSelector((state) => state.tasks.selectedTask);
   const pagination = useAppSelector((state) => state.tasks.pagination);
-  
-  // Select tagIds and priorities directly - ensure they're always arrays
   const tagIds = useAppSelector((state) => state.tasks.filters.tagIds) ?? [];
   const priorities = useAppSelector((state) => state.tasks.filters.priorities) ?? [];
-  
-  // Select other filter properties
   const searchTerm = useAppSelector((state) => state.tasks.filters.searchTerm);
   const userId = useAppSelector((state) => state.tasks.filters.userId);
   const sortBy = useAppSelector((state) => state.tasks.filters.sortBy ?? 'createdAt');
   const sortOrder = useAppSelector((state) => state.tasks.filters.sortOrder ?? 'desc');
-  
   const { tags } = useAppSelector((state) => state.tags);
   const { users } = useAppSelector((state) => state.users);
-  
   
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -56,6 +49,9 @@ function App() {
     const stored = localStorage.getItem('darkMode');
     return stored ? stored === 'true' : false;
   });
+
+  const tagIdsKey = useArrayKey(tagIds);
+  const prioritiesKey = useArrayKey(priorities);
 
   useEffect(() => {
     if (darkMode) {
@@ -72,20 +68,6 @@ function App() {
     dispatch(fetchUsers());
   }, [dispatch]);
 
-  // Refetch tasks when pagination or filters change
-  // Create stable string keys from arrays - only changes when content changes
-  const tagIdsKey = useMemo(() => {
-    const arr = tagIds || [];
-    const sorted = [...arr].sort((a, b) => a - b);
-    return sorted.join(',');
-  }, [tagIds]);
-  
-  const prioritiesKey = useMemo(() => {
-    const arr = priorities || [];
-    const sorted = [...arr].sort((a, b) => a - b);
-    return sorted.join(',');
-  }, [priorities]);
-  
   useEffect(() => {
     dispatch(fetchTasks());
   }, [
@@ -96,13 +78,12 @@ function App() {
     userId,
     sortBy,
     sortOrder,
-    tagIdsKey, // Sorted and joined - stable reference that only changes when content changes
-    prioritiesKey, // Sorted and joined - stable reference that only changes when content changes
+    tagIdsKey,
+    prioritiesKey,
   ]);
 
   const handleCreateTask = async (data: CreateTaskDto) => {
     try {
-      // Ensure createdByUserId is set
       if (!data.createdByUserId || data.createdByUserId === 0) {
         if (data.userIds && data.userIds.length > 0) {
           data.createdByUserId = data.userIds[0];
@@ -122,7 +103,6 @@ function App() {
   const handleUpdateTask = async (data: CreateTaskDto) => {
     if (!editingTask) return;
     try {
-      // Create UpdateTaskDto with all required fields (excluding createdByUserId)
       const updateData: UpdateTaskDto = {
         id: editingTask.id,
         title: data.title,
@@ -236,9 +216,9 @@ function App() {
             <>
               <TaskFilters
                 searchTerm={searchTerm || ''}
-                priorities={priorities} // Direct array reference
+                priorities={priorities}
                 userId={userId}
-                tagIds={tagIds} // Direct array reference
+                tagIds={tagIds}
                 sortBy={sortBy}
                 sortOrder={sortOrder}
                 users={users}

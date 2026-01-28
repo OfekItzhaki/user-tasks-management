@@ -1,21 +1,22 @@
-import React, { useMemo } from 'react';
-import { Priority, Tag, User } from '../types';
+import React from 'react';
+import { Tag, User } from '../types';
 import { PrioritySelector } from './PrioritySelector';
 import { TagSelector } from './TagSelector';
+import { useTaskFilters } from '../hooks/useTaskFilters';
 
 interface TaskFiltersProps {
   searchTerm: string;
-  priorities: number[] | undefined; // Multiple priorities only
+  priorities: number[] | undefined;
   userId: number | undefined;
-  tagIds: number[] | undefined; // Multiple tags only
+  tagIds: number[] | undefined;
   sortBy: string;
   sortOrder: 'asc' | 'desc';
   users: User[];
   tags: Tag[];
   onSearchChange: (value: string) => void;
-  onPrioritiesChange: (value: number[] | undefined) => void; // Multiple priorities only
+  onPrioritiesChange: (value: number[] | undefined) => void;
   onUserIdChange: (value: number | undefined) => void;
-  onTagIdsChange: (value: number[] | undefined) => void; // Multiple tags only
+  onTagIdsChange: (value: number[] | undefined) => void;
   onSortByChange: (value: string) => void;
   onSortOrderChange: (value: 'asc' | 'desc') => void;
   onClearFilters: () => void;
@@ -38,24 +39,8 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
   onSortOrderChange,
   onClearFilters,
 }) => {
-  // Check if any filters are active
+  const { selectedPriorities, selectedTagIds } = useTaskFilters(priorities, tagIds);
   const hasActiveFilters = searchTerm || (priorities && priorities.length > 0) || userId || (tagIds && tagIds.length > 0);
-
-  // Convert priorities array to Priority enum array for PrioritySelector
-  const selectedPriorities = React.useMemo(() => {
-    if (priorities && priorities.length > 0) {
-      return priorities.map(p => p as Priority);
-    }
-    return [];
-  }, [priorities]);
-
-  // Convert tagIds array for TagSelector
-  const selectedTagIds = React.useMemo(() => {
-    if (tagIds && tagIds.length > 0) {
-      return tagIds;
-    }
-    return [];
-  }, [tagIds]);
 
   return (
     <div className="glass-card p-4 mb-6 space-y-4" style={{ position: 'relative', overflow: 'visible', zIndex: 100, isolation: 'isolate' }}>
@@ -71,7 +56,6 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
         )}
       </div>
 
-      {/* Search */}
       <div>
         <label htmlFor="search" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Search
@@ -96,9 +80,7 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
         </div>
       </div>
 
-      {/* Filters Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Priority Filter - Multi-select */}
         <div>
           <PrioritySelector
             selectedPriorities={selectedPriorities}
@@ -110,7 +92,6 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
           />
         </div>
 
-        {/* User Filter */}
         <div>
           <label htmlFor="user-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Assigned User
@@ -119,7 +100,7 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
             id="user-filter"
             value={userId || ''}
             onChange={(e) => onUserIdChange(e.target.value ? Number(e.target.value) : undefined)}
-            className="w-full premium-input"
+            className="w-full premium-input border-2 border-gray-300 dark:border-gray-600"
           >
             <option value="">All Users</option>
             {users.map((user) => (
@@ -130,7 +111,6 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
           </select>
         </div>
 
-        {/* Tag Filter - Multi-select dropdown */}
         <div>
           <TagSelector
             tags={tags}
@@ -145,7 +125,6 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
         </div>
       </div>
 
-      {/* Sort Controls */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-200 dark:border-gray-700">
         <div>
           <label htmlFor="sort-by" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -155,7 +134,7 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
             id="sort-by"
             value={sortBy}
             onChange={(e) => onSortByChange(e.target.value)}
-            className="w-full premium-input"
+            className="w-full premium-input border-2 border-gray-300 dark:border-gray-600"
           >
             <option value="createdAt">Created Date</option>
             <option value="title">Title</option>
@@ -172,7 +151,7 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
             id="sort-order"
             value={sortOrder}
             onChange={(e) => onSortOrderChange(e.target.value as 'asc' | 'desc')}
-            className="w-full premium-input"
+            className="w-full premium-input border-2 border-gray-300 dark:border-gray-600"
           >
             <option value="desc">Descending</option>
             <option value="asc">Ascending</option>

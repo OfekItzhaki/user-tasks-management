@@ -28,7 +28,7 @@ export const PriorityDropdown: React.FC<PriorityDropdownProps> = ({
         id="priority"
         value={selectedPriority}
         onChange={(e) => onChange(Number(e.target.value) as Priority)}
-        className={`w-full premium-input ${error ? 'border-red-500 focus:ring-red-500' : ''}`}
+        className={`w-full premium-input border-2 ${error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600'}`}
       >
         {priorityOptions.map((option) => (
           <option key={option.value} value={option.value}>
