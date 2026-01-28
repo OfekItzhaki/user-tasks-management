@@ -109,7 +109,10 @@ static void TryStartRabbitMQ(ILogger logger)
                 using var process = Process.Start(startInfo);
                 if (process != null)
                 {
+                    var output = process.StandardOutput.ReadToEnd();
+                    var error = process.StandardError.ReadToEnd();
                     process.WaitForExit(10000); // Wait up to 10 seconds
+                    
                     if (process.ExitCode == 0)
                     {
                         logger.LogInformation("RabbitMQ container started successfully");
@@ -117,6 +120,15 @@ static void TryStartRabbitMQ(ILogger logger)
                         System.Threading.Thread.Sleep(3000);
                         return;
                     }
+                    else
+                    {
+                        logger.LogWarning("Docker compose command failed with exit code {ExitCode}. Output: {Output}, Error: {Error}", 
+                            process.ExitCode, output, error);
+                    }
+                }
+                else
+                {
+                    logger.LogWarning("Failed to start docker process. Docker may not be installed or accessible.");
                 }
                 
                 // Try docker-compose (older syntax)
@@ -133,12 +145,20 @@ static void TryStartRabbitMQ(ILogger logger)
                 using var process2 = Process.Start(startInfo);
                 if (process2 != null)
                 {
+                    var output2 = process2.StandardOutput.ReadToEnd();
+                    var error2 = process2.StandardError.ReadToEnd();
                     process2.WaitForExit(10000);
+                    
                     if (process2.ExitCode == 0)
                     {
                         logger.LogInformation("RabbitMQ container started successfully");
                         System.Threading.Thread.Sleep(3000);
                         return;
+                    }
+                    else
+                    {
+                        logger.LogWarning("Docker-compose command failed with exit code {ExitCode}. Output: {Output}, Error: {Error}", 
+                            process2.ExitCode, output2, error2);
                     }
                 }
                 
