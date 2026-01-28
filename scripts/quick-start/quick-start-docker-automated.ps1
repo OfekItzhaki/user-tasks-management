@@ -86,10 +86,26 @@ if (-not $prerequisitesOk) {
 # Function to check if Docker Desktop is running
 function Test-DockerRunning {
     try {
-        # Simple check - same as fix-docker.ps1 (which works reliably)
-        # docker ps is fast when Docker is ready, and fails quickly when it's not
-        $null = docker ps 2>&1 | Out-Null
-        return $LASTEXITCODE -eq 0
+        # Use a timeout to prevent hanging when Docker Desktop is starting
+        # docker ps should respond quickly when ready, but may hang when starting
+        $job = Start-Job -ScriptBlock {
+            docker ps 2>&1 | Out-Null
+            return $LASTEXITCODE
+        }
+        
+        # Wait max 2 seconds for response (Docker responds instantly when ready)
+        $completed = Wait-Job -Job $job -Timeout 2
+        
+        if ($completed) {
+            $result = Receive-Job -Job $job
+            Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+            return $result -eq 0
+        } else {
+            # Timeout - Docker daemon not ready yet (or hanging)
+            Stop-Job -Job $job -ErrorAction SilentlyContinue
+            Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+            return $false
+        }
     } catch {
         return $false
     }
@@ -201,15 +217,21 @@ if (-not (Test-DockerRunning)) {
         Write-Host "  Docker Desktop can take time to fully initialize, especially after updates" -ForegroundColor Gray
         Write-Host ""
         
-        $maxWait = 90 # 1.5 minutes max wait (increased for slower systems)
+        $maxWait = 120 # 2 minutes max wait (Docker Desktop can be slow to start)
         $waited = 0
-        $checkInterval = 3 # Check every 3 seconds (balance between speed and resource usage)
+        $checkInterval = 5 # Check every 5 seconds (reduced frequency to avoid too many checks)
+        
+        Write-Host "  Note: Docker Desktop initialization can take 30-90 seconds" -ForegroundColor Gray
+        Write-Host "  This is normal, especially on first start or after updates" -ForegroundColor Gray
+        Write-Host ""
         
         while (-not (Test-DockerRunning) -and $waited -lt $maxWait) {
             Start-Sleep -Seconds $checkInterval
             $waited += $checkInterval
+            
+            # Show progress every 15 seconds
             if ($waited % 15 -eq 0) {
-                Write-Host "  Still waiting... ($waited seconds)" -ForegroundColor Gray
+                Write-Host "  Still waiting... ($waited / $maxWait seconds)" -ForegroundColor Gray
                 # Check if Docker Desktop process is still running
                 $stillRunning = Get-Process -Name "Docker Desktop" -ErrorAction SilentlyContinue
                 if (-not $stillRunning) {
