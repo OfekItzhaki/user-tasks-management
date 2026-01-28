@@ -238,18 +238,28 @@ Write-Host "Starting Docker services (this may take a few minutes on first run).
 
 # Remove any existing containers to avoid name conflicts
 Write-Host "Cleaning up any existing containers..." -ForegroundColor Gray
-Push-Location $projectRoot
 try {
-    # Stop and remove existing containers (ignore errors if none exist)
+    # First, try docker compose down to remove containers created by compose
+    Push-Location $projectRoot
     if ($composeCommand -eq "docker compose") {
         docker compose -f $dockerComposePath --project-directory $projectRoot down 2>&1 | Out-Null
     } else {
         docker-compose -f $dockerComposePath --project-directory $projectRoot down 2>&1 | Out-Null
     }
+    Pop-Location
+    
+    # Also remove containers directly by name (in case they were created outside compose)
+    $containerNames = @("taskmanagement-sqlserver", "taskmanagement-rabbitmq", "taskmanagement-api", "taskmanagement-frontend", "taskmanagement-service")
+    foreach ($containerName in $containerNames) {
+        $existingContainer = docker ps -a --filter "name=^${containerName}$" --format "{{.ID}}" 2>$null
+        if ($existingContainer) {
+            Write-Host "  Removing existing container: $containerName" -ForegroundColor Yellow
+            docker rm -f $containerName 2>&1 | Out-Null
+        }
+    }
 } catch {
     # Ignore errors during cleanup - containers might not exist
 }
-Pop-Location
 
 Write-Host "Pulling images and starting containers..." -ForegroundColor Gray
 Write-Host ""
