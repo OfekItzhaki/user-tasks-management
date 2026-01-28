@@ -95,14 +95,14 @@ if ($rabbitmqRunning) {
         Push-Location $projectRoot
         try {
             # Check if docker compose or docker-compose is available
-            $composeCommand = if (Get-Command "docker" -ErrorAction SilentlyContinue) {
-                if (docker compose version 2>&1 | Out-Null; $LASTEXITCODE -eq 0) {
-                    "docker compose"
+            $composeCommand = $null
+            if (Get-Command "docker" -ErrorAction SilentlyContinue) {
+                docker compose version 2>&1 | Out-Null
+                if ($LASTEXITCODE -eq 0) {
+                    $composeCommand = "docker compose"
                 } else {
-                    "docker-compose"
+                    $composeCommand = "docker-compose"
                 }
-            } else {
-                $null
             }
             
             if ($composeCommand) {
