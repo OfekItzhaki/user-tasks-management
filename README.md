@@ -176,7 +176,7 @@ If using `.\setup.ps1` instead:
 
 ## Setup Instructions
 
-> **💡 Tip**: If you're on a new machine, use the automated setup script: `.\setup.ps1` (see [Quick Start](#-quick-start) above)
+> **💡 Tip**: If you're on a new machine, **double-click `First setup.bat`** or run `.\First setup.ps1` to get started! (see [Quick Start](#-quick-start) above)
 
 ### 1. Clone the Repository
 
@@ -428,19 +428,36 @@ POST /api/tasks
 
 ## 🚀 Quick Start
 
-### Option 1: Docker Setup (Recommended - Easiest) 🐳
+### 🆕 Easiest Way: First Setup (Recommended)
+
+**Double-click `First setup.bat`** in the project root folder!
+
+This will:
+1. Prompt you to choose between **Docker** or **Local** setup
+2. Run the fully automated setup script for your choice
+3. Handle everything automatically (database, dependencies, builds, migrations, services)
+
+**That's it!** No need to run separate scripts. Everything is self-contained.
+
+### Option 1: Docker Setup (Recommended) 🐳
 
 **No need to install SQL Server or RabbitMQ locally!** Uses Docker Compose:
 
+**Via First Setup:**
+- Double-click `First setup.bat` → Choose option `1` (Docker)
+
+**Or run directly:**
 ```powershell
-.\setup-docker.ps1
+.\scripts\quick-start\quick-start-docker-automated.ps1
 ```
 
 This single command will:
 - ✅ **Check prerequisites** (.NET 8.0 SDK, Node.js 20+, Docker Desktop)
+- ✅ **Start Docker Desktop** (if not running, with auto-fix for stuck states)
 - ✅ **Start Docker services** (SQL Server and RabbitMQ in containers)
 - ✅ **Install missing tools** (dotnet-ef tool automatically)
-- ✅ **Set up database** (create database and run migrations)
+- ✅ **Update connection strings** (for API and Windows Service)
+- ✅ **Set up database** (restore packages, build projects, create database and run migrations)
 - ✅ **Install frontend dependencies** (npm packages)
 - ✅ **Build the solution** (compile all projects)
 - ✅ **Start all services** (API, Frontend, Windows Service)
@@ -457,32 +474,51 @@ This single command will:
 - ✅ No local RabbitMQ installation needed
 - ✅ Consistent environment across machines
 - ✅ Easy cleanup: `docker compose down`
+- ✅ Fully self-contained - no need for separate setup scripts
 
-### Option 2: Local Setup (Traditional)
+### Option 2: Local Setup (Without Docker)
 
 If you prefer local installations or don't have Docker:
 
+**Via First Setup:**
+- Double-click `First setup.bat` → Choose option `2` (Local)
+
+**Or run directly:**
 ```powershell
-.\setup.ps1
+.\scripts\quick-start\quick-start-local-automated.ps1
 ```
 
 This requires:
 - SQL Server LocalDB (comes with Visual Studio) or SQL Server Express
-- RabbitMQ installed locally or via Docker
+- RabbitMQ installed locally or via Docker (optional)
+
+The script will:
+- ✅ **Check prerequisites** (.NET 8.0 SDK, Node.js 20+, LocalDB)
+- ✅ **Start LocalDB** automatically
+- ✅ **Install missing tools** (dotnet-ef tool automatically)
+- ✅ **Set up database** (restore packages, build projects, create database and run migrations)
+- ✅ **Install frontend dependencies** (npm packages)
+- ✅ **Build the solution** (compile all projects)
+- ✅ **Start all services** (API, Frontend, Windows Service)
+
+**Benefits:**
+- ✅ Fully self-contained - no need for separate setup scripts
+- ✅ Works without Docker Desktop
+- ✅ Uses LocalDB (usually already installed with Visual Studio)
 
 ### For Existing Setup (Quick Run)
 
 If everything is already set up, just start the services:
 
 ```powershell
-.\run.ps1
+.\scripts\start-all.ps1
 ```
 
 This will start all services without running setup checks.
 
 **For Docker setup**, make sure Docker services are running:
 ```powershell
-docker compose up -d
+docker compose -f docker\docker-compose.yml up -d
 ```
 
 ### 📖 Manual Setup (If Scripts Don't Work)
@@ -995,12 +1031,15 @@ UserTasks/
 │   ├── TaskManagement.WindowsService/ # Background service for reminders
 │   ├── TaskManagement.Web/          # React frontend (TypeScript)
 │   └── TaskManagement.Tests/        # Unit & integration tests
-├── setup.ps1                        # Automated setup script (NEW MACHINES)
-├── run.ps1                          # Quick start script (EXISTING SETUP)
+├── First setup.bat                   # First-time setup (double-click to run, prompts for Docker/Local)
+├── scripts/
+│   ├── quick-start/
+│   │   ├── quick-start-docker-automated.ps1  # Fully automated Docker setup
+│   │   └── quick-start-local-automated.ps1   # Fully automated Local setup
+│   ├── start-all.ps1                # Start all services (existing setup)
+│   └── setup.ps1                    # Legacy setup script (still works)
 ├── README.md                        # This file
-├── QUICK_START.md                   # Detailed setup guide
-├── REQUIREMENTS_REVIEW.md           # Requirements compliance review
-└── PROJECT_RECOMMENDATIONS.md       # Future enhancement suggestions
+└── instructions/                    # Detailed documentation
 ```
 
 ## Getting Help
@@ -1015,18 +1054,23 @@ UserTasks/
 ### Common Commands
 
 ```powershell
-# Automated setup (first time)
-.\setup.ps1
+# First-time setup (easiest - double-click First setup.bat)
+# Or run from PowerShell:
+powershell.exe -ExecutionPolicy Bypass -File "First setup.bat"
+
+# Or run quick-start scripts directly:
+.\scripts\quick-start\quick-start-docker-automated.ps1  # Docker setup
+.\scripts\quick-start\quick-start-local-automated.ps1   # Local setup
 
 # Quick start (existing setup)
-.\run.ps1
+.\scripts\start-all.ps1
 
 # Database migrations
 cd src\TaskManagement.API
 dotnet ef database update --project ..\TaskManagement.Infrastructure
 
 # Run tests
-dotnet test
+.\scripts\run-all-tests.ps1
 
 # Build solution
 dotnet build
