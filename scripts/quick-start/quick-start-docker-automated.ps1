@@ -238,8 +238,24 @@ Write-Host "Starting Docker services (this may take a few minutes on first run).
 
 # Remove any existing containers to avoid name conflicts
 Write-Host "Cleaning up any existing containers..." -ForegroundColor Gray
+
+# Remove containers directly by name first (most reliable method)
+$containerNames = @("taskmanagement-sqlserver", "taskmanagement-rabbitmq", "taskmanagement-api", "taskmanagement-frontend", "taskmanagement-service")
+foreach ($containerName in $containerNames) {
+    # Try to remove container - docker rm -f is safe even if container doesn't exist
+    $removeOutput = docker rm -f $containerName 2>&1
+    if ($LASTEXITCODE -eq 0 -or $removeOutput -match "No such container") {
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  Removed existing container: $containerName" -ForegroundColor Yellow
+        }
+    } else {
+        # Show error but continue - might be a different issue
+        Write-Host "  Warning: Could not remove $containerName : $removeOutput" -ForegroundColor Yellow
+    }
+}
+
+# Also try docker compose down to remove containers created by compose
 try {
-    # First, try docker compose down to remove containers created by compose
     Push-Location $projectRoot
     if ($composeCommand -eq "docker compose") {
         docker compose -f $dockerComposePath --project-directory $projectRoot down 2>&1 | Out-Null
@@ -247,19 +263,8 @@ try {
         docker-compose -f $dockerComposePath --project-directory $projectRoot down 2>&1 | Out-Null
     }
     Pop-Location
-    
-    # Also remove containers directly by name (in case they were created outside compose)
-    # Just try to remove them - docker rm -f is safe even if container doesn't exist
-    $containerNames = @("taskmanagement-sqlserver", "taskmanagement-rabbitmq", "taskmanagement-api", "taskmanagement-frontend", "taskmanagement-service")
-    foreach ($containerName in $containerNames) {
-        # Try to remove container (will fail silently if it doesn't exist)
-        $removeOutput = docker rm -f $containerName 2>&1
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "  Removed existing container: $containerName" -ForegroundColor Yellow
-        }
-    }
 } catch {
-    # Ignore errors during cleanup - containers might not exist
+    # Ignore errors - containers might not exist or already removed
 }
 
 Write-Host "Pulling images and starting containers..." -ForegroundColor Gray
