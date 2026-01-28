@@ -501,24 +501,270 @@ if ($dockerExitCode -ne 0) {
 
 Write-Host ""
 
-# Step 2: Run setup script
+# Step 2: Database Setup
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "Step 2: Running setup script..." -ForegroundColor Cyan
+Write-Host "Step 2: Setting up database..." -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-$setupScript = Join-Path $PSScriptRoot "..\setup-docker.ps1"
-if (Test-Path $setupScript) {
-    & $setupScript
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "[X] Setup script failed" -ForegroundColor Red
-        exit 1
-    }
+# Check if dotnet-ef is installed
+Write-Host "Checking Entity Framework tools..." -ForegroundColor Yellow
+function Test-Command {
+    param($command)
+    $null = Get-Command $command -ErrorAction SilentlyContinue
+    return $?
+}
+
+if (-not (Test-Command "dotnet-ef")) {
+    Write-Host "Installing dotnet-ef tool..." -ForegroundColor Yellow
+    dotnet tool install --global dotnet-ef
+    Write-Host "[OK] dotnet-ef installed" -ForegroundColor Green
 } else {
-    Write-Host "[X] Setup script not found: $setupScript" -ForegroundColor Red
+    Write-Host "[OK] dotnet-ef found" -ForegroundColor Green
+}
+Write-Host ""
+
+# Database setup paths
+$apiPath = "src\TaskManagement.API"
+$infrastructurePath = "src\TaskManagement.Infrastructure"
+$webPath = "src\TaskManagement.Web"
+
+if (-not (Test-Path $apiPath)) {
+    Write-Host "[X] API project not found at $apiPath" -ForegroundColor Red
     exit 1
 }
 
+# Wait a bit more for SQL Server to be fully ready
+Write-Host "Waiting for SQL Server to be fully ready..." -ForegroundColor Yellow
+Start-Sleep -Seconds 10
+
+# Update connection string to use Docker SQL Server
+$appsettingsPath = "$apiPath\appsettings.json"
+$dockerConnectionString = "Server=localhost,1433;Database=TaskManagementDb;User Id=sa;Password=YourStrong@Passw0rd123;TrustServerCertificate=True;MultipleActiveResultSets=true"
+
+if (Test-Path $appsettingsPath) {
+    $appsettingsContent = Get-Content $appsettingsPath -Raw
+    # Check if connection string needs updating
+    if ($appsettingsContent -notmatch "Server=localhost,1433") {
+        Write-Host "Updating API connection string for Docker SQL Server..." -ForegroundColor Yellow
+        $appsettingsContent = $appsettingsContent -replace '(?s)"ConnectionStrings":\s*\{[^}]*"DefaultConnection":\s*"[^"]*"', "`"ConnectionStrings`": {`n    `"DefaultConnection`": `"$dockerConnectionString`""
+        Set-Content -Path $appsettingsPath -Value $appsettingsContent -NoNewline
+        Write-Host "[OK] API connection string updated" -ForegroundColor Green
+    }
+}
+
+# Update Windows Service connection string (both appsettings.json and appsettings.Development.json)
+$serviceAppsettingsPaths = @(
+    "src\TaskManagement.WindowsService\appsettings.json",
+    "src\TaskManagement.WindowsService\appsettings.Development.json"
+)
+
+foreach ($serviceAppsettingsPath in $serviceAppsettingsPaths) {
+    if (Test-Path $serviceAppsettingsPath) {
+        try {
+            # Read the JSON file
+            $jsonContent = Get-Content $serviceAppsettingsPath -Raw | ConvertFrom-Json
+            
+            # Update connection string
+            if (-not $jsonContent.ConnectionStrings) {
+                $jsonContent | Add-Member -MemberType NoteProperty -Name "ConnectionStrings" -Value @{} -Force
+            }
+            $jsonContent.ConnectionStrings.DefaultConnection = $dockerConnectionString
+            
+            # Update RabbitMQ HostName
+            if (-not $jsonContent.RabbitMQ) {
+                $jsonContent | Add-Member -MemberType NoteProperty -Name "RabbitMQ" -Value @{} -Force
+            }
+            $jsonContent.RabbitMQ.HostName = "localhost"
+            
+            # Write back to file with proper formatting
+            $jsonContent | ConvertTo-Json -Depth 10 | Set-Content -Path $serviceAppsettingsPath
+            Write-Host "[OK] Windows Service configuration updated: $(Split-Path $serviceAppsettingsPath -Leaf)" -ForegroundColor Green
+        } catch {
+            Write-Host "[!] Warning: Could not update $serviceAppsettingsPath : $_" -ForegroundColor Yellow
+            # Fallback to regex replacement
+            $serviceAppsettingsContent = Get-Content $serviceAppsettingsPath -Raw
+            $serviceAppsettingsContent = $serviceAppsettingsContent -replace '(?s)"ConnectionStrings"\s*:\s*\{[^}]*"DefaultConnection"\s*:\s*"[^"]*"', "`"ConnectionStrings`": {`n    `"DefaultConnection`": `"$dockerConnectionString`""
+            $serviceAppsettingsContent = $serviceAppsettingsContent -replace '(?s)"RabbitMQ"\s*:\s*\{[^}]*"HostName"\s*:\s*"[^"]*"', "`"RabbitMQ`": {`n    `"HostName`": `"localhost`""
+            Set-Content -Path $serviceAppsettingsPath -Value $serviceAppsettingsContent -NoNewline
+            Write-Host "[OK] Windows Service configuration updated (fallback method): $(Split-Path $serviceAppsettingsPath -Leaf)" -ForegroundColor Green
+        }
+    }
+}
+Write-Host ""
+
+# Restore NuGet packages
+Write-Host "Restoring NuGet packages..." -ForegroundColor Yellow
+$originalLocation = Get-Location
+try {
+    # Try to restore from solution file first
+    $solutionFile = Get-ChildItem -Path "." -Filter "*.sln" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($solutionFile) {
+        Write-Host "  Restoring solution: $($solutionFile.Name)" -ForegroundColor Gray
+        dotnet restore $solutionFile.FullName 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[OK] NuGet packages restored" -ForegroundColor Green
+        } else {
+            Write-Host "[!] Solution restore failed, trying project restore..." -ForegroundColor Yellow
+            Set-Location $apiPath
+            dotnet restore 2>&1 | Out-Null
+            Set-Location "..\.."
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "[OK] NuGet packages restored" -ForegroundColor Green
+            } else {
+                Write-Host "[X] Failed to restore NuGet packages" -ForegroundColor Red
+                Set-Location $originalLocation
+                exit 1
+            }
+        }
+    } else {
+        Set-Location $apiPath
+        dotnet restore 2>&1 | Out-Null
+        Set-Location "..\.."
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[OK] NuGet packages restored" -ForegroundColor Green
+        } else {
+            Write-Host "[X] Failed to restore NuGet packages" -ForegroundColor Red
+            Set-Location $originalLocation
+            exit 1
+        }
+    }
+} catch {
+    Write-Host "[X] Error restoring packages: $_" -ForegroundColor Red
+    Set-Location $originalLocation
+    exit 1
+}
+Write-Host ""
+
+# Run migrations
+Write-Host "Running database migrations..." -ForegroundColor Yellow
+
+# Stop any running TaskManagement processes that might lock DLL files
+Write-Host "  Stopping any running TaskManagement processes..." -ForegroundColor Gray
+$runningProcesses = Get-Process | Where-Object {
+    $_.ProcessName -like "*TaskManagement*" -or
+    ($_.ProcessName -eq "dotnet" -and $_.Path -like "*TaskManagement*")
+}
+
+if ($runningProcesses) {
+    Write-Host "  Found $($runningProcesses.Count) running process(es), stopping them..." -ForegroundColor Yellow
+    $runningProcesses | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 3
+    Write-Host "  [OK] Stopped running processes" -ForegroundColor Green
+} else {
+    Write-Host "  [OK] No running processes found" -ForegroundColor Green
+}
+
+Set-Location $apiPath
+try {
+    # Restore API project
+    Write-Host "  Ensuring API project is restored..." -ForegroundColor Gray
+    $apiProjectPath = Join-Path (Get-Location) "TaskManagement.API.csproj"
+    $restoreOutput = dotnet restore $apiProjectPath 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[X] Failed to restore API project" -ForegroundColor Red
+        Write-Host "Restore output: $restoreOutput" -ForegroundColor Red
+        Set-Location $originalLocation
+        exit 1
+    }
+    
+    # Restore Infrastructure project
+    Write-Host "  Ensuring Infrastructure project is restored..." -ForegroundColor Gray
+    $infraProjectPath = Join-Path (Get-Location) "..\TaskManagement.Infrastructure\TaskManagement.Infrastructure.csproj"
+    $infraProjectPath = Resolve-Path $infraProjectPath -ErrorAction SilentlyContinue
+    
+    if (-not $infraProjectPath) {
+        Write-Host "[X] Infrastructure project not found" -ForegroundColor Red
+        Set-Location $originalLocation
+        exit 1
+    }
+    
+    $restoreOutput = dotnet restore $infraProjectPath 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[X] Failed to restore Infrastructure project" -ForegroundColor Red
+        Write-Host "Restore output: $restoreOutput" -ForegroundColor Red
+        Set-Location $originalLocation
+        exit 1
+    }
+    
+    # Build both projects before migrations
+    Write-Host "  Building API project..." -ForegroundColor Gray
+    $apiBuildOutput = dotnet build $apiProjectPath --no-restore 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[X] Failed to build API project" -ForegroundColor Red
+        Write-Host "Build output: $apiBuildOutput" -ForegroundColor Red
+        Set-Location $originalLocation
+        exit 1
+    }
+    
+    Write-Host "  Building Infrastructure project..." -ForegroundColor Gray
+    $infraBuildOutput = dotnet build $infraProjectPath --no-restore 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[X] Failed to build Infrastructure project" -ForegroundColor Red
+        Write-Host "Build output: $infraBuildOutput" -ForegroundColor Red
+        Set-Location $originalLocation
+        exit 1
+    }
+    
+    # Run migrations
+    Write-Host "  Running migrations..." -ForegroundColor Gray
+    $migrationOutput = dotnet ef database update --project $infraProjectPath --startup-project $apiProjectPath 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "[OK] Database migrations applied" -ForegroundColor Green
+    } else {
+        Write-Host "[X] Database migration failed" -ForegroundColor Red
+        Write-Host "Migration output:" -ForegroundColor Red
+        $migrationLines = $migrationOutput -split "`n" | Select-Object -Last 20
+        foreach ($line in $migrationLines) {
+            Write-Host "  $line" -ForegroundColor Red
+        }
+        Write-Host ""
+        Write-Host "Troubleshooting:" -ForegroundColor Yellow
+        Write-Host "  1. Make sure SQL Server container is running: docker ps" -ForegroundColor White
+        Write-Host "  2. Check if there are build errors in the projects" -ForegroundColor White
+        Set-Location $originalLocation
+        exit 1
+    }
+} catch {
+    Write-Host "[X] Error running migrations: $_" -ForegroundColor Red
+    Write-Host "Make sure SQL Server container is running: docker ps" -ForegroundColor Yellow
+    Set-Location $originalLocation
+    exit 1
+}
+Set-Location $originalLocation
+Write-Host ""
+
+# Frontend setup
+Write-Host "Setting up frontend..." -ForegroundColor Yellow
+if (-not (Test-Path $webPath)) {
+    Write-Host "[X] Web project not found at $webPath" -ForegroundColor Red
+    exit 1
+}
+
+if (-not (Test-Path "$webPath\node_modules")) {
+    Write-Host "Installing frontend dependencies..." -ForegroundColor Yellow
+    Set-Location $webPath
+    npm install
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[X] npm install failed" -ForegroundColor Red
+        Set-Location "..\.."
+        exit 1
+    }
+    Write-Host "[OK] Frontend dependencies installed" -ForegroundColor Green
+    Set-Location "..\.."
+} else {
+    Write-Host "[OK] Frontend dependencies already installed" -ForegroundColor Green
+}
+Write-Host ""
+
+# Build solution
+Write-Host "Building solution..." -ForegroundColor Yellow
+dotnet build
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "[X] Build failed" -ForegroundColor Red
+    exit 1
+}
+Write-Host "[OK] Build successful" -ForegroundColor Green
 Write-Host ""
 
 # Step 3: Start all services
