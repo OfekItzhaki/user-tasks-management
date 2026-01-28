@@ -400,25 +400,44 @@ try {
         exit 1
     }
     
-    # Build Infrastructure project to ensure it's ready
+    # Build both API and Infrastructure projects before migrations
+    # EF Core needs both projects built (API is startup project, Infrastructure has migrations)
+    Write-Host "  Building API project (startup project for EF Core)..." -ForegroundColor Gray
+    $apiBuildOutput = dotnet build $apiProjectPath --no-restore 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[X] Failed to build API project" -ForegroundColor Red
+        Write-Host "Build output: $apiBuildOutput" -ForegroundColor Red
+        Set-Location $originalLocation
+        exit 1
+    }
+    
     Write-Host "  Building Infrastructure project..." -ForegroundColor Gray
-    $buildOutput = dotnet build $infraProjectPath --no-restore 2>&1
+    $infraBuildOutput = dotnet build $infraProjectPath --no-restore 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[X] Failed to build Infrastructure project" -ForegroundColor Red
-        Write-Host "Build output: $buildOutput" -ForegroundColor Red
+        Write-Host "Build output: $infraBuildOutput" -ForegroundColor Red
         Set-Location $originalLocation
         exit 1
     }
     
     # Now run migrations (EF Core uses API as startup project, Infrastructure as migration project)
     Write-Host "  Running migrations..." -ForegroundColor Gray
-    $migrationOutput = dotnet ef database update --project $infraProjectPath 2>&1
+    $migrationOutput = dotnet ef database update --project $infraProjectPath --startup-project $apiProjectPath 2>&1
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[OK] Database migrations applied" -ForegroundColor Green
     } else {
         Write-Host "[X] Database migration failed" -ForegroundColor Red
-        Write-Host "Migration output: $migrationOutput" -ForegroundColor Red
-        Write-Host "Make sure SQL Server container is running: docker ps" -ForegroundColor Yellow
+        Write-Host "Migration output:" -ForegroundColor Red
+        # Show last 20 lines of output to see the actual error
+        $migrationLines = $migrationOutput -split "`n" | Select-Object -Last 20
+        foreach ($line in $migrationLines) {
+            Write-Host "  $line" -ForegroundColor Red
+        }
+        Write-Host ""
+        Write-Host "Troubleshooting:" -ForegroundColor Yellow
+        Write-Host "  1. Make sure SQL Server container is running: docker ps" -ForegroundColor White
+        Write-Host "  2. Check if there are build errors in the projects" -ForegroundColor White
+        Write-Host "  3. Try building manually: dotnet build" -ForegroundColor White
         Set-Location $originalLocation
         exit 1
     }
