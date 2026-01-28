@@ -1,8 +1,18 @@
 # First Setup Script
 # This script automatically runs the Docker automated quick-start setup
-# Double-click this file or run: .\First setup.ps1
+# Double-click "First setup.bat" or run: .\First setup.ps1
 
+# Set execution policy for this session (if needed)
 $ErrorActionPreference = "Continue"
+
+# Ensure we can run scripts
+if ($PSVersionTable.PSVersion.Major -ge 5) {
+    $executionPolicy = Get-ExecutionPolicy
+    if ($executionPolicy -eq "Restricted") {
+        Write-Host "[!] PowerShell execution policy is Restricted" -ForegroundColor Yellow
+        Write-Host "    Attempting to bypass for this script..." -ForegroundColor Gray
+    }
+}
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Task Management System - First Setup" -ForegroundColor Cyan
