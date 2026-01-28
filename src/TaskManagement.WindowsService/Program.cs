@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Net.NetworkInformation;
 using Microsoft.EntityFrameworkCore;
 using TaskManagement.Infrastructure;
 using TaskManagement.Infrastructure.Data;
