@@ -340,40 +340,48 @@ Write-Host "Running database migrations..." -ForegroundColor Yellow
 $originalLocation = Get-Location
 Set-Location $apiPath
 try {
-    # Build the Infrastructure project (restore was already done at solution level)
-    Write-Host "  Building Infrastructure project..." -ForegroundColor Gray
-    $infraProjectPath = Join-Path (Get-Location) "..\TaskManagement.Infrastructure\TaskManagement.Infrastructure.csproj"
-    $infraProjectPath = Resolve-Path $infraProjectPath -ErrorAction SilentlyContinue
-    
-    if (-not $infraProjectPath) {
-        Write-Host "[X] Infrastructure project not found at: $infraProjectPath" -ForegroundColor Red
+    # EF Core needs both API and Infrastructure projects restored
+    # Restore API project (startup project for EF Core)
+    Write-Host "  Ensuring API project is restored..." -ForegroundColor Gray
+    $apiProjectPath = Join-Path (Get-Location) "TaskManagement.API.csproj"
+    $restoreOutput = dotnet restore $apiProjectPath 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[X] Failed to restore API project" -ForegroundColor Red
+        Write-Host "Restore output: $restoreOutput" -ForegroundColor Red
         Set-Location $originalLocation
         exit 1
     }
     
-    # Build the project (restore should already be done)
-    $buildOutput = dotnet build $infraProjectPath --no-restore 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        # If build fails, try restore first
-        Write-Host "  Build failed, restoring Infrastructure project..." -ForegroundColor Yellow
-        $restoreOutput = dotnet restore $infraProjectPath 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "[X] Failed to restore Infrastructure project" -ForegroundColor Red
-            Write-Host "Restore output: $restoreOutput" -ForegroundColor Red
-            Set-Location $originalLocation
-            exit 1
-        }
-        # Try build again after restore
-        $buildOutput = dotnet build $infraProjectPath --no-restore 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "[X] Failed to build Infrastructure project" -ForegroundColor Red
-            Write-Host "Build output: $buildOutput" -ForegroundColor Red
-            Set-Location $originalLocation
-            exit 1
-        }
+    # Restore Infrastructure project
+    Write-Host "  Ensuring Infrastructure project is restored..." -ForegroundColor Gray
+    $infraProjectPath = Join-Path (Get-Location) "..\TaskManagement.Infrastructure\TaskManagement.Infrastructure.csproj"
+    $infraProjectPath = Resolve-Path $infraProjectPath -ErrorAction SilentlyContinue
+    
+    if (-not $infraProjectPath) {
+        Write-Host "[X] Infrastructure project not found" -ForegroundColor Red
+        Set-Location $originalLocation
+        exit 1
     }
     
-    # Now run migrations
+    $restoreOutput = dotnet restore $infraProjectPath 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[X] Failed to restore Infrastructure project" -ForegroundColor Red
+        Write-Host "Restore output: $restoreOutput" -ForegroundColor Red
+        Set-Location $originalLocation
+        exit 1
+    }
+    
+    # Build Infrastructure project to ensure it's ready
+    Write-Host "  Building Infrastructure project..." -ForegroundColor Gray
+    $buildOutput = dotnet build $infraProjectPath --no-restore 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[X] Failed to build Infrastructure project" -ForegroundColor Red
+        Write-Host "Build output: $buildOutput" -ForegroundColor Red
+        Set-Location $originalLocation
+        exit 1
+    }
+    
+    # Now run migrations (EF Core uses API as startup project, Infrastructure as migration project)
     Write-Host "  Running migrations..." -ForegroundColor Gray
     $migrationOutput = dotnet ef database update --project $infraProjectPath 2>&1
     if ($LASTEXITCODE -eq 0) {
