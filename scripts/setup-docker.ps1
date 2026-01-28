@@ -282,15 +282,22 @@ if ($appsettingsContent -notmatch "Server=localhost,1433") {
     Write-Host "[OK] Connection string updated" -ForegroundColor Green
 }
 
-# Update Windows Service connection string
-$serviceAppsettingsPath = "src\TaskManagement.WindowsService\appsettings.json"
-if (Test-Path $serviceAppsettingsPath) {
-    $serviceAppsettingsContent = Get-Content $serviceAppsettingsPath -Raw
-    if ($serviceAppsettingsContent -notmatch "Server=localhost,1433") {
-        $serviceAppsettingsContent = $serviceAppsettingsContent -replace '(?s)"ConnectionStrings":\s*\{[^}]*"DefaultConnection":\s*"[^"]*"', "`"ConnectionStrings`": {`n    `"DefaultConnection`": `"$dockerConnectionString`""
-        $serviceAppsettingsContent = $serviceAppsettingsContent -replace '(?s)"RabbitMQ":\s*\{[^}]*"HostName":\s*"[^"]*"', "`"RabbitMQ`": {`n    `"HostName`": `"localhost`""
-        Set-Content -Path $serviceAppsettingsPath -Value $serviceAppsettingsContent -NoNewline
-        Write-Host "[OK] Windows Service configuration updated" -ForegroundColor Green
+# Update Windows Service connection string (both appsettings.json and appsettings.Development.json)
+$serviceAppsettingsPaths = @(
+    "src\TaskManagement.WindowsService\appsettings.json",
+    "src\TaskManagement.WindowsService\appsettings.Development.json"
+)
+
+foreach ($serviceAppsettingsPath in $serviceAppsettingsPaths) {
+    if (Test-Path $serviceAppsettingsPath) {
+        $serviceAppsettingsContent = Get-Content $serviceAppsettingsPath -Raw
+        # Update if it doesn't already have the Docker connection string
+        if ($serviceAppsettingsContent -notmatch "Server=localhost,1433") {
+            $serviceAppsettingsContent = $serviceAppsettingsContent -replace '(?s)"ConnectionStrings":\s*\{[^}]*"DefaultConnection":\s*"[^"]*"', "`"ConnectionStrings`": {`n    `"DefaultConnection`": `"$dockerConnectionString`""
+            $serviceAppsettingsContent = $serviceAppsettingsContent -replace '(?s)"RabbitMQ":\s*\{[^}]*"HostName":\s*"[^"]*"', "`"RabbitMQ`": {`n    `"HostName`": `"localhost`""
+            Set-Content -Path $serviceAppsettingsPath -Value $serviceAppsettingsContent -NoNewline
+            Write-Host "[OK] Windows Service configuration updated: $(Split-Path $serviceAppsettingsPath -Leaf)" -ForegroundColor Green
+        }
     }
 }
 
