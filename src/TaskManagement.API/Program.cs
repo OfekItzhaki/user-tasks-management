@@ -34,10 +34,21 @@ builder.Services.AddSwaggerGen(c =>
     // Include XML comments from Application layer (for DTOs)
     var applicationAssembly = typeof(TaskManagement.Application.DTOs.CreateTaskDto).Assembly;
     var applicationXmlFile = $"{applicationAssembly.GetName().Name}.xml";
-    var applicationXmlPath = Path.Combine(AppContext.BaseDirectory, "..", "TaskManagement.Application", "bin", "Debug", "net8.0", applicationXmlFile);
-    if (File.Exists(applicationXmlPath))
+    // Try multiple possible paths (Debug/Release, different build configurations)
+    var possiblePaths = new[]
     {
-        c.IncludeXmlComments(applicationXmlPath);
+        Path.Combine(AppContext.BaseDirectory, "..", "TaskManagement.Application", "bin", "Debug", "net8.0", applicationXmlFile),
+        Path.Combine(AppContext.BaseDirectory, "..", "TaskManagement.Application", "bin", "Release", "net8.0", applicationXmlFile),
+        Path.Combine(AppContext.BaseDirectory, applicationXmlFile)
+    };
+    
+    foreach (var xmlPath in possiblePaths)
+    {
+        if (File.Exists(xmlPath))
+        {
+            c.IncludeXmlComments(xmlPath);
+            break;
+        }
     }
 });
 

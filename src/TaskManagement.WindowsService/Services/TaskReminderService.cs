@@ -30,15 +30,10 @@ public class TaskReminderService : BackgroundService
 
     protected override async System.Threading.Tasks.Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Task Reminder Service started.");
-        Console.WriteLine("[SERVICE] Task Reminder Service started");
-        Console.WriteLine($"[SERVICE] Checking for overdue tasks every {_checkInterval.TotalMinutes} minute(s)");
+        _logger.LogInformation("Task Reminder Service started. Checking for overdue tasks every {Interval} minute(s).", _checkInterval.TotalMinutes);
         
         // Try to start consuming (will log warning if RabbitMQ is not available)
         _rabbitMQService.StartConsuming(ReminderQueueName, ProcessReminder);
-        Console.WriteLine("[SERVICE] Attempted to subscribe to 'Remainder' queue");
-        Console.WriteLine("[SERVICE] Note: If RabbitMQ is not running, reminders won't be processed.");
-        Console.WriteLine("[SERVICE] Start RabbitMQ with: .\\scripts\\start-rabbitmq.ps1");
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -49,13 +44,10 @@ public class TaskReminderService : BackgroundService
             catch (Microsoft.Data.SqlClient.SqlException sqlEx)
             {
                 _logger.LogError(sqlEx, "Database error checking overdue tasks. This may indicate a schema mismatch. Error: {Message}", sqlEx.Message);
-                Console.WriteLine($"[ERROR] Database error: {sqlEx.Message}");
-                Console.WriteLine("[INFO] Service will continue running. Please check database migrations.");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error checking overdue tasks: {Message}", ex.Message);
-                Console.WriteLine($"[ERROR] Error checking overdue tasks: {ex.Message}");
             }
 
             await System.Threading.Tasks.Task.Delay(_checkInterval, stoppingToken);
@@ -95,26 +87,19 @@ public class TaskReminderService : BackgroundService
 
                     _logger.LogInformation("Published reminder for overdue task: {TaskId} - {TaskTitle} to user: {UserName}", 
                         task.Id, task.Title, userTask.User.FullName);
-                    Console.WriteLine($"[PUBLISH] Reminder published - Task: {task.Title} (ID: {task.Id}) to {userTask.User.FullName}");
                 }
             }
 
             if (overdueTasks.Any())
             {
                 _logger.LogInformation("Found and published {Count} overdue task reminders", overdueTasks.Count);
-                Console.WriteLine($"[SUMMARY] Found and published {overdueTasks.Count} overdue task reminder(s)");
             }
-            else
+        }
+            catch (Microsoft.Data.SqlClient.SqlException sqlEx)
             {
-                Console.WriteLine("[CHECK] No overdue tasks found");
+                _logger.LogError(sqlEx, "Database error in CheckAndPublishOverdueTasks: {Message}", sqlEx.Message);
+                throw; // Re-throw to be caught by outer handler
             }
-        }
-        catch (Microsoft.Data.SqlClient.SqlException sqlEx)
-        {
-            _logger.LogError(sqlEx, "Database error in CheckAndPublishOverdueTasks: {Message}", sqlEx.Message);
-            Console.WriteLine($"[ERROR] Database error: {sqlEx.Message}");
-            throw; // Re-throw to be caught by outer handler
-        }
     }
 
     private void ProcessReminder(string message)
@@ -127,16 +112,11 @@ public class TaskReminderService : BackgroundService
                 // Log the message in the required format
                 var logMessage = $"Hi your Task is due {reminder.TaskTitle}";
                 _logger.LogInformation(logMessage);
-                
-                // Also write to console for better visibility
-                Console.WriteLine($"[REMINDER] {logMessage}");
-                Console.WriteLine($"         Task ID: {reminder.TaskId}, User: {reminder.UserName}, Due: {reminder.DueDate:yyyy-MM-dd HH:mm:ss}");
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing reminder message: {Message}", message);
-            Console.WriteLine($"[ERROR] Failed to process reminder: {ex.Message}");
         }
     }
 

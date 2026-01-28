@@ -66,12 +66,6 @@ public class TasksController : ControllerBase
                 return BadRequest("All tag IDs must be greater than 0.");
             }
 
-            // Log received parameters for debugging (remove in production)
-            _logger.LogDebug("GetTasks called with parameters: Page={Page}, PageSize={PageSize}, TagIds=[{TagIds}], Priorities=[{Priorities}]",
-                page, pageSize,
-                tagIds != null ? string.Join(",", tagIds) : "null",
-                priorities != null ? string.Join(",", priorities) : "null");
-
             // Sanitize string inputs (trim whitespace, handle empty strings, prevent XSS)
             var sanitizedSearchTerm = string.IsNullOrWhiteSpace(searchTerm) 
                 ? null 
