@@ -12,9 +12,9 @@ Write-Host ""
 Write-Host "Checking Docker..." -ForegroundColor Yellow
 try {
     docker ps | Out-Null
-    Write-Host "✓ Docker is running" -ForegroundColor Green
+    Write-Host "[OK] Docker is running" -ForegroundColor Green
 } catch {
-    Write-Host "✗ Docker is not running" -ForegroundColor Red
+    Write-Host "[X] Docker is not running" -ForegroundColor Red
     Write-Host "Please start Docker Desktop and try again." -ForegroundColor Yellow
     exit 1
 }
@@ -26,7 +26,7 @@ $projectRoot = Join-Path $PSScriptRoot ".."
 $dockerComposePath = Join-Path $projectRoot "docker\docker-compose.yml"
 
 if (-not (Test-Path $dockerComposePath)) {
-    Write-Host "✗ docker-compose.yml not found at: $dockerComposePath" -ForegroundColor Red
+    Write-Host "[X] docker-compose.yml not found at: $dockerComposePath" -ForegroundColor Red
     exit 1
 }
 
@@ -36,7 +36,7 @@ Push-Location $projectRoot
 try {
     docker compose -f $dockerComposePath up -d rabbitmq
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "✓ RabbitMQ started successfully" -ForegroundColor Green
+        Write-Host "[OK] RabbitMQ started successfully" -ForegroundColor Green
         Write-Host ""
         Write-Host "Waiting for RabbitMQ to be ready..." -ForegroundColor Yellow
         Start-Sleep -Seconds 10
@@ -61,21 +61,21 @@ try {
         
         Write-Host ""
         if ($rabbitmqReady) {
-            Write-Host "✓ RabbitMQ is ready!" -ForegroundColor Green
+            Write-Host "[OK] RabbitMQ is ready!" -ForegroundColor Green
             Write-Host ""
             Write-Host "RabbitMQ Management UI: http://localhost:15672 (guest/guest)" -ForegroundColor Cyan
             Write-Host "AMQP Port: localhost:5672" -ForegroundColor Cyan
         } else {
-            Write-Host "⚠ RabbitMQ may still be starting (this is normal)" -ForegroundColor Yellow
+            Write-Host "[!] RabbitMQ may still be starting (this is normal)" -ForegroundColor Yellow
             Write-Host "  Check status with: docker ps --filter name=rabbitmq" -ForegroundColor Gray
         }
     } else {
-        Write-Host "✗ Failed to start RabbitMQ" -ForegroundColor Red
+        Write-Host "[X] Failed to start RabbitMQ" -ForegroundColor Red
         Pop-Location
         exit 1
     }
 } catch {
-    Write-Host "✗ Error starting RabbitMQ: $_" -ForegroundColor Red
+    Write-Host "[X] Error starting RabbitMQ: $_" -ForegroundColor Red
     Pop-Location
     exit 1
 }

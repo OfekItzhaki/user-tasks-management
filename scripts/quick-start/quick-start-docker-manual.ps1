@@ -28,41 +28,41 @@ $prerequisitesOk = $true
 
 # Check .NET SDK
 if (-not (Test-Command "dotnet")) {
-    Write-Host "✗ .NET SDK not found" -ForegroundColor Red
+    Write-Host "[X] .NET SDK not found" -ForegroundColor Red
     $prerequisitesOk = $false
 } else {
     $version = dotnet --version
-    Write-Host "✓ .NET SDK: $version" -ForegroundColor Green
+    Write-Host "[OK] .NET SDK: $version" -ForegroundColor Green
 }
 
 # Check Node.js
 if (-not (Test-Command "node")) {
-    Write-Host "✗ Node.js not found" -ForegroundColor Red
+    Write-Host "[X] Node.js not found" -ForegroundColor Red
     $prerequisitesOk = $false
 } else {
     $version = node --version
-    Write-Host "✓ Node.js: $version" -ForegroundColor Green
+    Write-Host "[OK] Node.js: $version" -ForegroundColor Green
 }
 
 # Check Docker
 if (-not (Test-Command "docker")) {
-    Write-Host "✗ Docker not found" -ForegroundColor Red
+    Write-Host "[X] Docker not found" -ForegroundColor Red
     $prerequisitesOk = $false
 } else {
     $version = docker --version
-    Write-Host "✓ Docker: $version" -ForegroundColor Green
+    Write-Host "[OK] Docker: $version" -ForegroundColor Green
 }
 
 # Check Docker Compose
 $composeCommand = $null
 if (Test-Command "docker compose") {
     $composeCommand = "docker compose"
-    Write-Host "✓ Docker Compose: Available" -ForegroundColor Green
+    Write-Host "[OK] Docker Compose: Available" -ForegroundColor Green
 } elseif (Test-Command "docker-compose") {
     $composeCommand = "docker-compose"
-    Write-Host "✓ Docker Compose: Available" -ForegroundColor Green
+    Write-Host "[OK] Docker Compose: Available" -ForegroundColor Green
 } else {
-    Write-Host "✗ Docker Compose not found" -ForegroundColor Red
+    Write-Host "[X] Docker Compose not found" -ForegroundColor Red
     $prerequisitesOk = $false
 }
 
@@ -80,9 +80,9 @@ if (-not $prerequisitesOk) {
 Write-Host "Checking if Docker is running..." -ForegroundColor Yellow
 try {
     docker ps | Out-Null
-    Write-Host "✓ Docker is running" -ForegroundColor Green
+    Write-Host "[OK] Docker is running" -ForegroundColor Green
 } catch {
-    Write-Host "✗ Docker is not running" -ForegroundColor Red
+    Write-Host "[X] Docker is not running" -ForegroundColor Red
     Write-Host "Please start Docker Desktop and run this script again." -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Press any key to exit..." -ForegroundColor Yellow
@@ -176,7 +176,7 @@ Write-Host "All steps completed!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Access points:" -ForegroundColor Cyan
-Write-Host "  • Frontend: http://localhost:5173" -ForegroundColor White
-Write-Host "  • API Swagger: http://localhost:5063/swagger" -ForegroundColor White
-Write-Host "  • RabbitMQ Management: http://localhost:15672 (guest/guest)" -ForegroundColor White
+Write-Host "  - Frontend: http://localhost:5173" -ForegroundColor White
+Write-Host "  - API Swagger: http://localhost:5063/swagger" -ForegroundColor White
+Write-Host "  - RabbitMQ Management: http://localhost:15672 (guest/guest)" -ForegroundColor White
 Write-Host ""

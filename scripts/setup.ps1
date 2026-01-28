@@ -24,7 +24,7 @@ function Test-Command {
 function Test-DotNetSDK {
     if (Test-Command "dotnet") {
         $version = dotnet --version
-        Write-Host "✓ .NET SDK found: $version" -ForegroundColor Green
+        Write-Host "[OK] .NET SDK found: $version" -ForegroundColor Green
         return $true
     }
     return $false
@@ -34,7 +34,7 @@ function Test-DotNetSDK {
 function Test-NodeJS {
     if (Test-Command "node") {
         $version = node --version
-        Write-Host "✓ Node.js found: $version" -ForegroundColor Green
+        Write-Host "[OK] Node.js found: $version" -ForegroundColor Green
         return $true
     }
     return $false
@@ -45,14 +45,14 @@ function Test-SqlLocalDB {
     try {
         $sqllocaldb = Get-Command sqllocaldb -ErrorAction SilentlyContinue
         if ($sqllocaldb) {
-            Write-Host "✓ SQL Server LocalDB found" -ForegroundColor Green
+            Write-Host "[OK] SQL Server LocalDB found" -ForegroundColor Green
             return $true
         }
     } catch {
         # LocalDB might be installed but not in PATH
         $localdbPath = "C:\Program Files\Microsoft SQL Server\150\Tools\Binn\SqlLocalDB.exe"
         if (Test-Path $localdbPath) {
-            Write-Host "✓ SQL Server LocalDB found" -ForegroundColor Green
+            Write-Host "[OK] SQL Server LocalDB found" -ForegroundColor Green
             return $true
         }
     }
@@ -64,7 +64,7 @@ function Test-RabbitMQ {
     try {
         $response = Invoke-WebRequest -Uri "http://localhost:15672" -TimeoutSec 2 -ErrorAction SilentlyContinue
         if ($response.StatusCode -eq 200) {
-            Write-Host "✓ RabbitMQ is running" -ForegroundColor Green
+            Write-Host "[OK] RabbitMQ is running" -ForegroundColor Green
             return $true
         }
     } catch {
@@ -72,7 +72,7 @@ function Test-RabbitMQ {
         if (Test-Command "docker") {
             $containers = docker ps --filter "name=rabbit" --format "{{.Names}}" 2>$null
             if ($containers) {
-                Write-Host "✓ RabbitMQ Docker container is running" -ForegroundColor Green
+                Write-Host "[OK] RabbitMQ Docker container is running" -ForegroundColor Green
                 return $true
             }
         }
@@ -88,25 +88,25 @@ $prerequisitesOk = $true
 $missingPrerequisites = @()
 
 if (-not (Test-DotNetSDK)) {
-    Write-Host "✗ .NET SDK not found" -ForegroundColor Red
+    Write-Host "[X] .NET SDK not found" -ForegroundColor Red
     $prerequisitesOk = $false
     $missingPrerequisites += ".NET 8.0 SDK"
 }
 
 if (-not (Test-NodeJS)) {
-    Write-Host "✗ Node.js not found" -ForegroundColor Red
+    Write-Host "[X] Node.js not found" -ForegroundColor Red
     $prerequisitesOk = $false
     $missingPrerequisites += "Node.js 20.19+ or 22.12+"
 }
 
 if (-not (Test-SqlLocalDB)) {
-    Write-Host "✗ SQL Server LocalDB not found" -ForegroundColor Red
+    Write-Host "[X] SQL Server LocalDB not found" -ForegroundColor Red
     $prerequisitesOk = $false
     $missingPrerequisites += "SQL Server LocalDB"
 }
 
 if (-not (Test-RabbitMQ)) {
-    Write-Host "⚠ RabbitMQ not running (optional for Windows Service)" -ForegroundColor Yellow
+    Write-Host "[!] RabbitMQ not running (optional for Windows Service)" -ForegroundColor Yellow
     Write-Host "  You can start it later with: docker start some-rabbit" -ForegroundColor Gray
 }
 
@@ -133,9 +133,9 @@ Write-Host "Checking Entity Framework tools..." -ForegroundColor Yellow
 if (-not (Test-Command "dotnet-ef")) {
     Write-Host "Installing dotnet-ef tool..." -ForegroundColor Yellow
     dotnet tool install --global dotnet-ef
-    Write-Host "✓ dotnet-ef installed" -ForegroundColor Green
+    Write-Host "[OK] dotnet-ef installed" -ForegroundColor Green
 } else {
-    Write-Host "✓ dotnet-ef found" -ForegroundColor Green
+    Write-Host "[OK] dotnet-ef found" -ForegroundColor Green
 }
 Write-Host ""
 
@@ -145,7 +145,7 @@ $apiPath = "src\TaskManagement.API"
 $infrastructurePath = "src\TaskManagement.Infrastructure"
 
 if (-not (Test-Path $apiPath)) {
-    Write-Host "✗ API project not found at $apiPath" -ForegroundColor Red
+    Write-Host "[X] API project not found at $apiPath" -ForegroundColor Red
     exit 1
 }
 
@@ -155,19 +155,19 @@ Set-Location $apiPath
 try {
     dotnet ef database update --project "..\TaskManagement.Infrastructure" --no-build 2>&1 | Out-Null
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "✓ Database migrations applied" -ForegroundColor Green
+        Write-Host "[OK] Database migrations applied" -ForegroundColor Green
     } else {
         Write-Host "Running migrations (first time)..." -ForegroundColor Yellow
         dotnet ef database update --project "..\TaskManagement.Infrastructure"
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "✓ Database created and migrations applied" -ForegroundColor Green
+            Write-Host "[OK] Database created and migrations applied" -ForegroundColor Green
         } else {
-            Write-Host "✗ Database migration failed" -ForegroundColor Red
+            Write-Host "[X] Database migration failed" -ForegroundColor Red
             exit 1
         }
     }
 } catch {
-    Write-Host "✗ Error running migrations: $_" -ForegroundColor Red
+    Write-Host "[X] Error running migrations: $_" -ForegroundColor Red
     exit 1
 }
 Set-Location "..\.."
@@ -178,7 +178,7 @@ Write-Host "Setting up frontend..." -ForegroundColor Yellow
 $webPath = "src\TaskManagement.Web"
 
 if (-not (Test-Path $webPath)) {
-    Write-Host "✗ Web project not found at $webPath" -ForegroundColor Red
+    Write-Host "[X] Web project not found at $webPath" -ForegroundColor Red
     exit 1
 }
 
@@ -187,14 +187,14 @@ if (-not (Test-Path "$webPath\node_modules")) {
     Set-Location $webPath
     npm install
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "✗ npm install failed" -ForegroundColor Red
+        Write-Host "[X] npm install failed" -ForegroundColor Red
         Set-Location "..\.."
         exit 1
     }
-    Write-Host "✓ Frontend dependencies installed" -ForegroundColor Green
+    Write-Host "[OK] Frontend dependencies installed" -ForegroundColor Green
     Set-Location "..\.."
 } else {
-    Write-Host "✓ Frontend dependencies already installed" -ForegroundColor Green
+    Write-Host "[OK] Frontend dependencies already installed" -ForegroundColor Green
 }
 Write-Host ""
 
@@ -202,10 +202,10 @@ Write-Host ""
 Write-Host "Building solution..." -ForegroundColor Yellow
 dotnet build
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "✗ Build failed" -ForegroundColor Red
+    Write-Host "[X] Build failed" -ForegroundColor Red
     exit 1
 }
-Write-Host "✓ Build successful" -ForegroundColor Green
+Write-Host "[OK] Build successful" -ForegroundColor Green
 Write-Host ""
 
 # Start services
@@ -253,7 +253,7 @@ if ($serviceMode -eq "2") {
     $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
     
     if (-not $isAdmin) {
-        Write-Host "⚠ Administrator privileges required for Windows Service installation." -ForegroundColor Yellow
+        Write-Host "[!] Administrator privileges required for Windows Service installation." -ForegroundColor Yellow
         Write-Host "Please run PowerShell as Administrator and run this script again." -ForegroundColor Yellow
         Write-Host "Or choose Development Mode (option 1) to run as console app." -ForegroundColor Yellow
         Write-Host ""
@@ -273,7 +273,7 @@ if ($serviceMode -eq "2") {
         dotnet publish -c Release -o $publishPath
         
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "✓ Service published successfully" -ForegroundColor Green
+            Write-Host "[OK] Service published successfully" -ForegroundColor Green
             
             # Check if service already exists
             $existingService = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
@@ -289,20 +289,20 @@ if ($serviceMode -eq "2") {
             sc.exe create $serviceName binPath= "`"$exePath`"" start= auto | Out-Null
             
             if ($LASTEXITCODE -eq 0) {
-                Write-Host "✓ Windows Service created successfully" -ForegroundColor Green
+                Write-Host "[OK] Windows Service created successfully" -ForegroundColor Green
                 Write-Host "Starting service..." -ForegroundColor Yellow
                 Start-Service -Name $serviceName
-                Write-Host "✓ Windows Service started" -ForegroundColor Green
+                Write-Host "[OK] Windows Service started" -ForegroundColor Green
                 Write-Host ""
                 Write-Host "Service is now running in the background!" -ForegroundColor Green
                 Write-Host "View logs in Event Viewer: eventvwr.msc" -ForegroundColor Cyan
             } else {
-                Write-Host "✗ Failed to create Windows Service" -ForegroundColor Red
+                Write-Host "[X] Failed to create Windows Service" -ForegroundColor Red
                 Write-Host "Falling back to Development Mode..." -ForegroundColor Yellow
                 Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD'; Write-Host 'Windows Service (Development Mode)' -ForegroundColor Cyan; dotnet run" -WindowStyle Normal
             }
         } else {
-            Write-Host "✗ Failed to publish service" -ForegroundColor Red
+            Write-Host "[X] Failed to publish service" -ForegroundColor Red
             Write-Host "Falling back to Development Mode..." -ForegroundColor Yellow
             Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD'; Write-Host 'Windows Service (Development Mode)' -ForegroundColor Cyan; dotnet run" -WindowStyle Normal
         }

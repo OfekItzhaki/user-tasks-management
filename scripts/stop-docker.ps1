@@ -17,7 +17,7 @@ function Test-Command {
 
 # Check Docker
 if (-not (Test-Command "docker")) {
-    Write-Host "✗ Docker not found" -ForegroundColor Red
+    Write-Host "[X] Docker not found" -ForegroundColor Red
     Write-Host "Docker is not installed or not in PATH." -ForegroundColor Yellow
     exit 1
 }
@@ -29,7 +29,7 @@ if (Test-Command "docker compose") {
 } elseif (Test-Command "docker-compose") {
     $composeCommand = "docker-compose"
 } else {
-    Write-Host "✗ Docker Compose not found" -ForegroundColor Red
+    Write-Host "[X] Docker Compose not found" -ForegroundColor Red
     exit 1
 }
 
@@ -37,9 +37,9 @@ if (Test-Command "docker compose") {
 Write-Host "Checking if Docker is running..." -ForegroundColor Yellow
 try {
     docker ps | Out-Null
-    Write-Host "✓ Docker is running" -ForegroundColor Green
+    Write-Host "[OK] Docker is running" -ForegroundColor Green
 } catch {
-    Write-Host "✗ Docker is not running" -ForegroundColor Red
+    Write-Host "[X] Docker is not running" -ForegroundColor Red
     Write-Host "Please start Docker Desktop first." -ForegroundColor Yellow
     exit 1
 }
@@ -60,12 +60,12 @@ try {
         docker-compose -f $dockerComposePath down
     }
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "✓ Docker containers stopped" -ForegroundColor Green
+        Write-Host "[OK] Docker containers stopped" -ForegroundColor Green
     } else {
-        Write-Host "⚠ Some containers may not have stopped" -ForegroundColor Yellow
+        Write-Host "[!] Some containers may not have stopped" -ForegroundColor Yellow
     }
 } catch {
-    Write-Host "✗ Error stopping Docker containers: $_" -ForegroundColor Red
+    Write-Host "[X] Error stopping Docker containers: $_" -ForegroundColor Red
     Pop-Location
     exit 1
 }

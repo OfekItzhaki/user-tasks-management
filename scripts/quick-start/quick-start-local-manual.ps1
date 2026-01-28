@@ -28,20 +28,20 @@ $prerequisitesOk = $true
 
 # Check .NET SDK
 if (-not (Test-Command "dotnet")) {
-    Write-Host "✗ .NET SDK not found" -ForegroundColor Red
+    Write-Host "[X] .NET SDK not found" -ForegroundColor Red
     $prerequisitesOk = $false
 } else {
     $version = dotnet --version
-    Write-Host "✓ .NET SDK: $version" -ForegroundColor Green
+    Write-Host "[OK] .NET SDK: $version" -ForegroundColor Green
 }
 
 # Check Node.js
 if (-not (Test-Command "node")) {
-    Write-Host "✗ Node.js not found" -ForegroundColor Red
+    Write-Host "[X] Node.js not found" -ForegroundColor Red
     $prerequisitesOk = $false
 } else {
     $version = node --version
-    Write-Host "✓ Node.js: $version" -ForegroundColor Green
+    Write-Host "[OK] Node.js: $version" -ForegroundColor Green
 }
 
 # Check SQL Server LocalDB
@@ -49,11 +49,11 @@ $localdbFound = $false
 try {
     $localdbInfo = sqllocaldb info mssqllocaldb 2>&1
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "✓ SQL Server LocalDB: Available" -ForegroundColor Green
+        Write-Host "[OK] SQL Server LocalDB: Available" -ForegroundColor Green
         $localdbFound = $true
     }
 } catch {
-    Write-Host "⚠ SQL Server LocalDB: Not found (will try to continue)" -ForegroundColor Yellow
+    Write-Host "[!] SQL Server LocalDB: Not found (will try to continue)" -ForegroundColor Yellow
 }
 
 Write-Host ""
@@ -144,8 +144,8 @@ Write-Host "All steps completed!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Access points:" -ForegroundColor Cyan
-Write-Host "  • Frontend: http://localhost:5173" -ForegroundColor White
-Write-Host "  • API Swagger: http://localhost:5063/swagger" -ForegroundColor White
+Write-Host "  - Frontend: http://localhost:5173" -ForegroundColor White
+Write-Host "  - API Swagger: http://localhost:5063/swagger" -ForegroundColor White
 Write-Host ""
 Write-Host "Note: RabbitMQ is optional. Windows Service will work without it." -ForegroundColor Yellow
 Write-Host ""
