@@ -291,13 +291,13 @@ $serviceAppsettingsPaths = @(
 foreach ($serviceAppsettingsPath in $serviceAppsettingsPaths) {
     if (Test-Path $serviceAppsettingsPath) {
         $serviceAppsettingsContent = Get-Content $serviceAppsettingsPath -Raw
-        # Update if it doesn't already have the Docker connection string
-        if ($serviceAppsettingsContent -notmatch "Server=localhost,1433") {
-            $serviceAppsettingsContent = $serviceAppsettingsContent -replace '(?s)"ConnectionStrings":\s*\{[^}]*"DefaultConnection":\s*"[^"]*"', "`"ConnectionStrings`": {`n    `"DefaultConnection`": `"$dockerConnectionString`""
-            $serviceAppsettingsContent = $serviceAppsettingsContent -replace '(?s)"RabbitMQ":\s*\{[^}]*"HostName":\s*"[^"]*"', "`"RabbitMQ`": {`n    `"HostName`": `"localhost`""
-            Set-Content -Path $serviceAppsettingsPath -Value $serviceAppsettingsContent -NoNewline
-            Write-Host "[OK] Windows Service configuration updated: $(Split-Path $serviceAppsettingsPath -Leaf)" -ForegroundColor Green
-        }
+        # Always update to ensure Docker connection string (force update)
+        # Replace the entire ConnectionStrings section
+        $serviceAppsettingsContent = $serviceAppsettingsContent -replace '(?s)"ConnectionStrings"\s*:\s*\{[^}]*"DefaultConnection"\s*:\s*"[^"]*"', "`"ConnectionStrings`": {`n    `"DefaultConnection`": `"$dockerConnectionString`""
+        # Replace RabbitMQ HostName
+        $serviceAppsettingsContent = $serviceAppsettingsContent -replace '(?s)"RabbitMQ"\s*:\s*\{[^}]*"HostName"\s*:\s*"[^"]*"', "`"RabbitMQ`": {`n    `"HostName`": `"localhost`""
+        Set-Content -Path $serviceAppsettingsPath -Value $serviceAppsettingsContent -NoNewline
+        Write-Host "[OK] Windows Service configuration updated: $(Split-Path $serviceAppsettingsPath -Leaf)" -ForegroundColor Green
     }
 }
 
