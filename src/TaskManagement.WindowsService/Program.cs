@@ -279,6 +279,8 @@ builder.Logging.AddSimpleConsole(options =>
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
+// Log the connection string (mask password for security) - will log after host is built
+
 builder.Services.AddDbContext<TaskManagementDbContext>(options =>
     options.UseSqlServer(connectionString, sqlOptions =>
     {
@@ -298,5 +300,31 @@ builder.Services.AddSingleton<IRabbitMQService>(sp =>
 builder.Services.AddHostedService<TaskReminderService>();
 
 var host = builder.Build();
+
+// Log startup information
+var hostLogger = host.Services.GetRequiredService<ILogger<Program>>();
+hostLogger.LogInformation("========================================");
+hostLogger.LogInformation("Windows Service Starting...");
+hostLogger.LogInformation("Service will check for overdue tasks every minute");
+hostLogger.LogInformation("========================================");
+
+// Log connection string (mask password)
+var connectionStringForLog = connectionString;
+if (connectionStringForLog.Contains("Password="))
+{
+    var passwordIndex = connectionStringForLog.IndexOf("Password=");
+    var afterPassword = connectionStringForLog.Substring(passwordIndex + 9);
+    var passwordEnd = afterPassword.IndexOf(";");
+    if (passwordEnd > 0)
+    {
+        connectionStringForLog = connectionStringForLog.Substring(0, passwordIndex + 9) + "***" + connectionStringForLog.Substring(passwordIndex + 9 + passwordEnd);
+    }
+    else
+    {
+        connectionStringForLog = connectionStringForLog.Substring(0, passwordIndex + 9) + "***";
+    }
+}
+hostLogger.LogInformation("Using database connection: {ConnectionString}", connectionStringForLog);
+hostLogger.LogInformation("Environment: {Environment}", builder.Environment.EnvironmentName);
 
 host.Run();
