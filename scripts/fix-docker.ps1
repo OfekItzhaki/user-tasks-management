@@ -57,14 +57,29 @@ Write-Host ""
 # Offer to restart Docker Desktop
 if ($dockerProcess) {
     Write-Host "4. Docker Desktop is running but not responding" -ForegroundColor Yellow
+    if ($dockerProcess.Count -gt 1) {
+        Write-Host "   [!] Multiple Docker Desktop processes detected - this may indicate a stuck state" -ForegroundColor Yellow
+    }
     Write-Host ""
-    $restart = Read-Host "   Would you like to restart Docker Desktop? (y/n)"
+    Write-Host "   Options:" -ForegroundColor Cyan
+    Write-Host "   1. Restart Docker Desktop (recommended)" -ForegroundColor White
+    Write-Host "   2. Restart WSL 2 and Docker Desktop (if option 1 doesn't work)" -ForegroundColor White
+    Write-Host "   3. Skip (manual troubleshooting)" -ForegroundColor White
+    Write-Host ""
+    $choice = Read-Host "   Enter choice (1/2/3)"
     
-    if ($restart -eq "y" -or $restart -eq "Y") {
+    if ($choice -eq "1" -or $choice -eq "2") {
         Write-Host ""
-        Write-Host "   Stopping Docker Desktop..." -ForegroundColor Yellow
-        Stop-Process -Name "Docker Desktop" -Force -ErrorAction SilentlyContinue
+        Write-Host "   Stopping all Docker Desktop processes..." -ForegroundColor Yellow
+        Get-Process -Name "Docker Desktop" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
         Start-Sleep -Seconds 3
+        
+        if ($choice -eq "2") {
+            Write-Host "   Shutting down WSL 2..." -ForegroundColor Yellow
+            wsl --shutdown 2>&1 | Out-Null
+            Start-Sleep -Seconds 2
+            Write-Host "   [OK] WSL 2 shut down" -ForegroundColor Green
+        }
         
         Write-Host "   Starting Docker Desktop..." -ForegroundColor Yellow
         $dockerPaths = @(
