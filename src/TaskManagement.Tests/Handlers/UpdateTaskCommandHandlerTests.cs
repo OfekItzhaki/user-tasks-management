@@ -91,9 +91,9 @@ public class UpdateTaskCommandHandlerTests : IDisposable
         var handler = new UpdateTaskCommandHandler(_context);
         var command = new UpdateTaskCommand
         {
+            Id = 1,
             Task = new UpdateTaskDto
             {
-                Id = 1,
                 Title = "Updated Task",
                 Description = "Updated Description",
                 DueDate = DateTime.Today.AddDays(2),
@@ -123,9 +123,9 @@ public class UpdateTaskCommandHandlerTests : IDisposable
         var handler = new UpdateTaskCommandHandler(_context);
         var command = new UpdateTaskCommand
         {
+            Id = 999,
             Task = new UpdateTaskDto
             {
-                Id = 999,
                 Title = "Non-existent Task",
                 Description = "Description",
                 DueDate = DateTime.Today.AddDays(1),
