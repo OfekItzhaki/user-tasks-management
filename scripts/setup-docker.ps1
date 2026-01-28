@@ -464,23 +464,9 @@ Write-Host ""
 Write-Host "Press Ctrl+C in any window to stop that service" -ForegroundColor Gray
 Write-Host ""
 
-# Start API
-Write-Host "Starting API..." -ForegroundColor Yellow
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD\src\TaskManagement.API'; dotnet run" -WindowStyle Normal
-
-# Wait a bit for API to start
-Start-Sleep -Seconds 3
-
-# Start Frontend
-Write-Host "Starting Frontend..." -ForegroundColor Yellow
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD\src\TaskManagement.Web'; npm run dev" -WindowStyle Normal
-
-# Wait a bit
-Start-Sleep -Seconds 2
-
-# Start Windows Service in Development Mode
-Write-Host "Starting Windows Service (Development Mode)..." -ForegroundColor Yellow
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD\src\TaskManagement.WindowsService'; Write-Host 'Windows Service (Development Mode)' -ForegroundColor Cyan; dotnet run" -WindowStyle Normal
+# Services are started by start-all.ps1 (called from quick-start script)
+# Don't start services here to avoid duplicates
+Write-Host "Note: Services will be started by the quick-start script" -ForegroundColor Gray
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green
