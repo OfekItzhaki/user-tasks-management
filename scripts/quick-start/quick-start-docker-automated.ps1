@@ -86,11 +86,23 @@ if (-not $prerequisitesOk) {
 # Check if Docker is running
 Write-Host "Checking if Docker is running..." -ForegroundColor Yellow
 try {
-    docker ps | Out-Null
+    # Use docker info which fails more reliably if Docker daemon isn't accessible
+    $dockerInfo = docker info 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "Docker daemon not accessible"
+    }
     Write-Host "[OK] Docker is running" -ForegroundColor Green
 } catch {
-    Write-Host "[X] Docker is not running" -ForegroundColor Red
-    Write-Host "Please start Docker Desktop and try again." -ForegroundColor Yellow
+    Write-Host "[X] Docker is not running or Docker Desktop is not started" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Please:" -ForegroundColor Yellow
+    Write-Host "  1. Start Docker Desktop from the Start menu" -ForegroundColor White
+    Write-Host "  2. Wait for Docker Desktop to fully start (whale icon in system tray)" -ForegroundColor White
+    Write-Host "  3. Run this script again" -ForegroundColor White
+    Write-Host ""
+    Write-Host "If Docker Desktop is already running, try:" -ForegroundColor Yellow
+    Write-Host "  - Restart Docker Desktop" -ForegroundColor White
+    Write-Host "  - Check Docker Desktop logs for errors" -ForegroundColor White
     exit 1
 }
 
@@ -107,13 +119,23 @@ $dockerComposePath = Join-Path $projectRoot "docker\docker-compose.yml"
 try {
     Push-Location $projectRoot
     if ($composeCommand -eq "docker compose") {
-        docker compose -f $dockerComposePath up -d sqlserver rabbitmq
+        docker compose -f $dockerComposePath up -d sqlserver rabbitmq 2>&1 | Out-String | Out-Null
     } else {
-        docker-compose -f $dockerComposePath up -d sqlserver rabbitmq
+        docker-compose -f $dockerComposePath up -d sqlserver rabbitmq 2>&1 | Out-String | Out-Null
     }
     Pop-Location
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[X] Failed to start Docker services" -ForegroundColor Red
+        Write-Host ""
+        Write-Host "Common issues:" -ForegroundColor Yellow
+        Write-Host "  - Docker Desktop is not running (start it from Start menu)" -ForegroundColor White
+        Write-Host "  - Docker Desktop is still starting (wait 30-60 seconds)" -ForegroundColor White
+        Write-Host "  - Port conflicts (check if ports 1433, 5672, 15672 are in use)" -ForegroundColor White
+        Write-Host ""
+        Write-Host "Try:" -ForegroundColor Yellow
+        Write-Host "  1. Start Docker Desktop and wait for it to fully start" -ForegroundColor White
+        Write-Host "  2. Check Docker Desktop status in system tray" -ForegroundColor White
+        Write-Host "  3. Run this script again" -ForegroundColor White
         exit 1
     }
     Write-Host "[OK] Docker services started" -ForegroundColor Green
@@ -121,6 +143,8 @@ try {
     Start-Sleep -Seconds 15
 } catch {
     Write-Host "[X] Error starting Docker services: $_" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Make sure Docker Desktop is running and try again." -ForegroundColor Yellow
     exit 1
 }
 
