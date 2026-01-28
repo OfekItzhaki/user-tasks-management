@@ -61,14 +61,26 @@ public class GetTasksWithMultipleTagsQueryHandler : IRequestHandler<GetTasksWith
                 t.DueDate,
                 t.Priority,
                 COUNT(DISTINCT tt.TagId) AS TagCount,
-                STRING_AGG(tag.Name, ', ') WITHIN GROUP (ORDER BY tag.Name) AS TagNames,
+                STUFF((
+                    SELECT ', ' + tag2.Name
+                    FROM TaskTags tt2
+                    INNER JOIN Tags tag2 ON tt2.TagId = tag2.Id
+                    WHERE tt2.TaskId = t.Id
+                    ORDER BY tag2.Name
+                    FOR XML PATH(''), TYPE
+                ).value('.', 'NVARCHAR(MAX)'), 1, 2, '') AS TagNames,
                 COUNT(DISTINCT ut.UserId) AS UserCount,
-                STRING_AGG(u.FullName, ', ') WITHIN GROUP (ORDER BY u.FullName) AS AssignedUsers
+                STUFF((
+                    SELECT ', ' + u2.FullName
+                    FROM UserTasks ut2
+                    INNER JOIN Users u2 ON ut2.UserId = u2.Id
+                    WHERE ut2.TaskId = t.Id
+                    ORDER BY u2.FullName
+                    FOR XML PATH(''), TYPE
+                ).value('.', 'NVARCHAR(MAX)'), 1, 2, '') AS AssignedUsers
             FROM Tasks t
             INNER JOIN TaskTags tt ON t.Id = tt.TaskId
-            INNER JOIN Tags tag ON tt.TagId = tag.Id
             LEFT JOIN UserTasks ut ON t.Id = ut.TaskId
-            LEFT JOIN Users u ON ut.UserId = u.Id
             GROUP BY t.Id, t.Title, t.Description, t.DueDate, t.Priority
             HAVING COUNT(DISTINCT tt.TagId) >= @MinTagCount
             ORDER BY TagCount DESC";
