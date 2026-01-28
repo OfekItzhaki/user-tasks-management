@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useAppDispatch, useAppSelector } from './store/hooks';
 import { 
@@ -24,6 +24,7 @@ import { TaskForm } from './components/TaskForm';
 import { TaskFilters } from './components/TaskFilters';
 import FloatingActionButton from './components/FloatingActionButton';
 import ErrorFallback from './components/ErrorFallback';
+import VersionFooter from './components/VersionFooter';
 import { CreateTaskDto, UpdateTaskDto, Task } from './types';
 import { useArrayKey } from './hooks/useArrayKey';
 
@@ -256,6 +257,8 @@ function App() {
             ariaLabel="Create New Task"
           />
         )}
+
+        <VersionFooter />
       </div>
     </ErrorBoundary>
   );
