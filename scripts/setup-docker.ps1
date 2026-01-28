@@ -337,42 +337,61 @@ Write-Host ""
 
 # Run migrations
 Write-Host "Running database migrations..." -ForegroundColor Yellow
+$originalLocation = Get-Location
 Set-Location $apiPath
 try {
-    # Restore and build the Infrastructure project explicitly before migrations
-    Write-Host "  Ensuring Infrastructure project is restored and built..." -ForegroundColor Gray
-    dotnet restore --project "..\TaskManagement.Infrastructure" 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "[X] Failed to restore Infrastructure project" -ForegroundColor Red
-        Set-Location "..\.."
+    # Build the Infrastructure project (restore was already done at solution level)
+    Write-Host "  Building Infrastructure project..." -ForegroundColor Gray
+    $infraProjectPath = Join-Path (Get-Location) "..\TaskManagement.Infrastructure\TaskManagement.Infrastructure.csproj"
+    $infraProjectPath = Resolve-Path $infraProjectPath -ErrorAction SilentlyContinue
+    
+    if (-not $infraProjectPath) {
+        Write-Host "[X] Infrastructure project not found at: $infraProjectPath" -ForegroundColor Red
+        Set-Location $originalLocation
         exit 1
     }
     
-    dotnet build --project "..\TaskManagement.Infrastructure" --no-restore 2>&1 | Out-Null
+    # Build the project (restore should already be done)
+    $buildOutput = dotnet build $infraProjectPath --no-restore 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "[X] Failed to build Infrastructure project" -ForegroundColor Red
-        Set-Location "..\.."
-        exit 1
+        # If build fails, try restore first
+        Write-Host "  Build failed, restoring Infrastructure project..." -ForegroundColor Yellow
+        $restoreOutput = dotnet restore $infraProjectPath 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[X] Failed to restore Infrastructure project" -ForegroundColor Red
+            Write-Host "Restore output: $restoreOutput" -ForegroundColor Red
+            Set-Location $originalLocation
+            exit 1
+        }
+        # Try build again after restore
+        $buildOutput = dotnet build $infraProjectPath --no-restore 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[X] Failed to build Infrastructure project" -ForegroundColor Red
+            Write-Host "Build output: $buildOutput" -ForegroundColor Red
+            Set-Location $originalLocation
+            exit 1
+        }
     }
     
     # Now run migrations
     Write-Host "  Running migrations..." -ForegroundColor Gray
-    dotnet ef database update --project "..\TaskManagement.Infrastructure"
+    $migrationOutput = dotnet ef database update --project $infraProjectPath 2>&1
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[OK] Database migrations applied" -ForegroundColor Green
     } else {
         Write-Host "[X] Database migration failed" -ForegroundColor Red
+        Write-Host "Migration output: $migrationOutput" -ForegroundColor Red
         Write-Host "Make sure SQL Server container is running: docker ps" -ForegroundColor Yellow
-        Set-Location "..\.."
+        Set-Location $originalLocation
         exit 1
     }
 } catch {
     Write-Host "[X] Error running migrations: $_" -ForegroundColor Red
     Write-Host "Make sure SQL Server container is running: docker ps" -ForegroundColor Yellow
-    Set-Location "..\.."
+    Set-Location $originalLocation
     exit 1
 }
-Set-Location "..\.."
+Set-Location $originalLocation
 Write-Host ""
 
 # Frontend setup
