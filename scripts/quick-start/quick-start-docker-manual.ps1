@@ -79,11 +79,19 @@ if (-not $prerequisitesOk) {
 # Check if Docker is running
 Write-Host "Checking if Docker is running..." -ForegroundColor Yellow
 try {
-    docker ps | Out-Null
+    # Use docker info which fails more reliably if Docker daemon isn't accessible
+    $dockerInfo = docker info 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "Docker daemon not accessible"
+    }
     Write-Host "[OK] Docker is running" -ForegroundColor Green
 } catch {
-    Write-Host "[X] Docker is not running" -ForegroundColor Red
-    Write-Host "Please start Docker Desktop and run this script again." -ForegroundColor Yellow
+    Write-Host "[X] Docker is not running or Docker Desktop is not started" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Please:" -ForegroundColor Yellow
+    Write-Host "  1. Start Docker Desktop from the Start menu" -ForegroundColor White
+    Write-Host "  2. Wait for Docker Desktop to fully start (whale icon in system tray)" -ForegroundColor White
+    Write-Host "  3. Run this script again" -ForegroundColor White
     Write-Host ""
     Write-Host "Press any key to exit..." -ForegroundColor Yellow
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
