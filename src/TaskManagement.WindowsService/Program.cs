@@ -27,12 +27,70 @@ static void TryStartRabbitMQ(ILogger logger)
 {
     try
     {
-        // Find project root (go up from bin/Debug/net8.0 or similar to src, then up to root)
-        var currentDir = AppContext.BaseDirectory;
-        var projectRoot = currentDir;
+        // Find project root - try multiple strategies
+        string? projectRoot = null;
         
-        // Navigate up to find docker-compose.yml
-        for (int i = 0; i < 5; i++)
+        // Strategy 1: Start from AppContext.BaseDirectory (executable location)
+        var baseDir = AppContext.BaseDirectory;
+        var currentDir = baseDir;
+        
+        // Navigate up from bin/Debug/net8.0 or bin/Release/net8.0
+        for (int i = 0; i < 8; i++) // Increased to 8 levels to handle deeper paths
+        {
+            var dockerComposePath = Path.Combine(currentDir, "docker", "docker-compose.yml");
+            if (File.Exists(dockerComposePath))
+            {
+                projectRoot = currentDir;
+                break;
+            }
+            
+            var parent = Path.GetDirectoryName(currentDir);
+            if (string.IsNullOrEmpty(parent) || parent == currentDir)
+                break;
+            currentDir = parent;
+        }
+        
+        // Strategy 2: If not found, try from current working directory
+        if (projectRoot == null)
+        {
+            currentDir = Directory.GetCurrentDirectory();
+            for (int i = 0; i < 8; i++)
+            {
+                var dockerComposePath = Path.Combine(currentDir, "docker", "docker-compose.yml");
+                if (File.Exists(dockerComposePath))
+                {
+                    projectRoot = currentDir;
+                    break;
+                }
+                
+                var parent = Path.GetDirectoryName(currentDir);
+                if (string.IsNullOrEmpty(parent) || parent == currentDir)
+                    break;
+                currentDir = parent;
+            }
+        }
+        
+        // Strategy 3: Try common project root patterns
+        if (projectRoot == null)
+        {
+            var possibleRoots = new[]
+            {
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Desktop", "UserTasks"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Desktop", "try"),
+            };
+            
+            foreach (var possibleRoot in possibleRoots)
+            {
+                var dockerComposePath = Path.Combine(possibleRoot, "docker", "docker-compose.yml");
+                if (File.Exists(dockerComposePath))
+                {
+                    projectRoot = possibleRoot;
+                    break;
+                }
+            }
+        }
+        
+        if (projectRoot != null)
         {
             var dockerComposePath = Path.Combine(projectRoot, "docker", "docker-compose.yml");
             if (File.Exists(dockerComposePath))
@@ -87,13 +145,13 @@ static void TryStartRabbitMQ(ILogger logger)
                 logger.LogWarning("Could not start RabbitMQ container. Please start it manually: docker compose -f docker/docker-compose.yml up -d rabbitmq");
                 return;
             }
-            
-            projectRoot = Path.GetDirectoryName(projectRoot);
-            if (string.IsNullOrEmpty(projectRoot))
-                break;
         }
         
-        logger.LogWarning("Could not find docker-compose.yml file. RabbitMQ will not be started automatically.");
+        if (projectRoot == null)
+        {
+            logger.LogWarning("Could not find docker-compose.yml file. Searched from: {BaseDirectory}, {WorkingDirectory}. RabbitMQ will not be started automatically.", 
+                AppContext.BaseDirectory, Directory.GetCurrentDirectory());
+        }
     }
     catch (Exception ex)
     {
