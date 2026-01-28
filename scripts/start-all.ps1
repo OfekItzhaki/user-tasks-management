@@ -108,6 +108,16 @@ Write-Host ""
 Write-Host "1. Starting API (port 5063/7000)..." -ForegroundColor Cyan
 # Get project root (one level up from scripts folder)
 $projectRoot = Split-Path $PSScriptRoot -Parent
+
+# Kill any existing process using port 5063
+Write-Host "  Checking for existing processes on port 5063..." -ForegroundColor Gray
+$existingProcess = Get-NetTCPConnection -LocalPort 5063 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique
+if ($existingProcess) {
+    Write-Host "  Stopping existing process on port 5063..." -ForegroundColor Yellow
+    Stop-Process -Id $existingProcess -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 2
+}
+
 $apiScript = @"
 `$env:DOTNET_ROOT = 'C:\Program Files\dotnet'
 `$env:PATH = 'C:\Program Files\dotnet;' + `$env:PATH
@@ -115,7 +125,7 @@ $apiScript = @"
 `$env:ASPNETCORE_URLS = 'http://localhost:5063'
 cd '$projectRoot\src\TaskManagement.API'
 Write-Host 'API starting...' -ForegroundColor Green
-dotnet run --launch-profile http
+dotnet run
 "@
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $apiScript
 Start-Sleep -Seconds 3
