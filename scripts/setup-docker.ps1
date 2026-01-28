@@ -87,23 +87,98 @@ if (-not $prerequisitesOk) {
     exit 1
 }
 
+# Function to check if Docker Desktop is running
+function Test-DockerRunning {
+    try {
+        $dockerInfo = docker info 2>&1 | Out-Null
+        return $LASTEXITCODE -eq 0
+    } catch {
+        return $false
+    }
+}
+
+# Function to start Docker Desktop
+function Start-DockerDesktop {
+    Write-Host "Docker Desktop is not running. Attempting to start it..." -ForegroundColor Yellow
+    Write-Host ""
+    
+    # Common Docker Desktop installation paths
+    $dockerPaths = @(
+        "${env:ProgramFiles}\Docker\Docker\Docker Desktop.exe",
+        "${env:ProgramFiles(x86)}\Docker\Docker\Docker Desktop.exe",
+        "$env:LOCALAPPDATA\Docker\Docker Desktop.exe"
+    )
+    
+    $dockerExe = $null
+    foreach ($path in $dockerPaths) {
+        if (Test-Path $path) {
+            $dockerExe = $path
+            break
+        }
+    }
+    
+    if (-not $dockerExe) {
+        Write-Host "[X] Docker Desktop executable not found" -ForegroundColor Red
+        Write-Host "Please start Docker Desktop manually and run this script again." -ForegroundColor Yellow
+        exit 1
+    }
+    
+    Write-Host "Starting Docker Desktop..." -ForegroundColor Cyan
+    try {
+        Start-Process -FilePath $dockerExe -ErrorAction Stop
+        Write-Host "[OK] Docker Desktop launch command executed" -ForegroundColor Green
+    } catch {
+        Write-Host "[X] Failed to start Docker Desktop: $_" -ForegroundColor Red
+        Write-Host "Please start Docker Desktop manually and run this script again." -ForegroundColor Yellow
+        exit 1
+    }
+    
+    # Wait for Docker Desktop to start
+    Write-Host ""
+    Write-Host "Waiting for Docker Desktop to start (this may take 30-60 seconds)..." -ForegroundColor Yellow
+    $maxWait = 120
+    $waited = 0
+    $checkInterval = 3
+    
+    while (-not (Test-DockerRunning) -and $waited -lt $maxWait) {
+        Start-Sleep -Seconds $checkInterval
+        $waited += $checkInterval
+        if ($waited % 10 -eq 0) {
+            Write-Host "  Still waiting... ($waited seconds)" -ForegroundColor Gray
+        }
+    }
+    
+    if (-not (Test-DockerRunning)) {
+        Write-Host "[X] Docker Desktop did not start within $maxWait seconds" -ForegroundColor Red
+        Write-Host "Please start Docker Desktop manually and ensure virtualization is enabled." -ForegroundColor Yellow
+        exit 1
+    }
+    
+    Write-Host "[OK] Docker Desktop is now running!" -ForegroundColor Green
+    Start-Sleep -Seconds 5 # Give Docker a moment to fully initialize
+}
+
 # Check if Docker is running
 Write-Host "Checking if Docker is running..." -ForegroundColor Yellow
-try {
-    # Use docker info which fails more reliably if Docker daemon isn't accessible
-    $dockerInfo = docker info 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw "Docker daemon not accessible"
+if (-not (Test-DockerRunning)) {
+    $dockerProcess = Get-Process -Name "Docker Desktop" -ErrorAction SilentlyContinue
+    if ($dockerProcess) {
+        Write-Host "Docker Desktop process detected, waiting for it to be ready..." -ForegroundColor Yellow
+        $maxWait = 60
+        $waited = 0
+        while (-not (Test-DockerRunning) -and $waited -lt $maxWait) {
+            Start-Sleep -Seconds 3
+            $waited += 3
+        }
+        if (-not (Test-DockerRunning)) {
+            Write-Host "[X] Docker Desktop is not responding" -ForegroundColor Red
+            exit 1
+        }
+    } else {
+        Start-DockerDesktop
     }
+} else {
     Write-Host "[OK] Docker is running" -ForegroundColor Green
-} catch {
-    Write-Host "[X] Docker is not running or Docker Desktop is not started" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "Please:" -ForegroundColor Yellow
-    Write-Host "  1. Start Docker Desktop from the Start menu" -ForegroundColor White
-    Write-Host "  2. Wait for Docker Desktop to fully start (whale icon in system tray)" -ForegroundColor White
-    Write-Host "  3. Run this script again" -ForegroundColor White
-    exit 1
 }
 Write-Host ""
 

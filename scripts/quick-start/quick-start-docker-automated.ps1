@@ -83,27 +83,144 @@ if (-not $prerequisitesOk) {
     exit 1
 }
 
+# Function to check if Docker Desktop is running
+function Test-DockerRunning {
+    try {
+        $dockerInfo = docker info 2>&1 | Out-Null
+        return $LASTEXITCODE -eq 0
+    } catch {
+        return $false
+    }
+}
+
+# Function to start Docker Desktop
+function Start-DockerDesktop {
+    Write-Host "Docker Desktop is not running. Attempting to start it..." -ForegroundColor Yellow
+    Write-Host ""
+    
+    # Common Docker Desktop installation paths
+    $dockerPaths = @(
+        "${env:ProgramFiles}\Docker\Docker\Docker Desktop.exe",
+        "${env:ProgramFiles(x86)}\Docker\Docker\Docker Desktop.exe",
+        "$env:LOCALAPPDATA\Docker\Docker Desktop.exe"
+    )
+    
+    $dockerExe = $null
+    foreach ($path in $dockerPaths) {
+        if (Test-Path $path) {
+            $dockerExe = $path
+            break
+        }
+    }
+    
+    if (-not $dockerExe) {
+        Write-Host "[X] Docker Desktop executable not found in common locations" -ForegroundColor Red
+        Write-Host ""
+        Write-Host "Please start Docker Desktop manually:" -ForegroundColor Yellow
+        Write-Host "  1. Open Start menu and search for 'Docker Desktop'" -ForegroundColor White
+        Write-Host "  2. Click to start Docker Desktop" -ForegroundColor White
+        Write-Host "  3. Wait for it to fully start (whale icon in system tray)" -ForegroundColor White
+        Write-Host "  4. Run this script again" -ForegroundColor White
+        exit 1
+    }
+    
+    Write-Host "Starting Docker Desktop..." -ForegroundColor Cyan
+    try {
+        Start-Process -FilePath $dockerExe -ErrorAction Stop
+        Write-Host "[OK] Docker Desktop launch command executed" -ForegroundColor Green
+    } catch {
+        Write-Host "[X] Failed to start Docker Desktop: $_" -ForegroundColor Red
+        Write-Host ""
+        Write-Host "Please start Docker Desktop manually and run this script again." -ForegroundColor Yellow
+        exit 1
+    }
+    
+    # Wait for Docker Desktop to start
+    Write-Host ""
+    Write-Host "Waiting for Docker Desktop to start..." -ForegroundColor Yellow
+    Write-Host "This may take 30-60 seconds. Please wait..." -ForegroundColor Gray
+    Write-Host ""
+    
+    $maxWait = 120 # Maximum wait time in seconds
+    $waited = 0
+    $checkInterval = 3 # Check every 3 seconds
+    $dockerReady = $false
+    
+    while (-not $dockerReady -and $waited -lt $maxWait) {
+        Start-Sleep -Seconds $checkInterval
+        $waited += $checkInterval
+        
+        if (Test-DockerRunning) {
+            $dockerReady = $true
+            Write-Host "[OK] Docker Desktop is now running!" -ForegroundColor Green
+            break
+        }
+        
+        # Show progress every 10 seconds
+        if ($waited % 10 -eq 0) {
+            Write-Host "  Still waiting... ($waited seconds)" -ForegroundColor Gray
+        }
+    }
+    
+    if (-not $dockerReady) {
+        Write-Host ""
+        Write-Host "[X] Docker Desktop did not start within $maxWait seconds" -ForegroundColor Red
+        Write-Host ""
+        Write-Host "Possible issues:" -ForegroundColor Yellow
+        Write-Host "  - Virtualization may not be enabled in BIOS" -ForegroundColor White
+        Write-Host "  - WSL 2 may not be installed or configured" -ForegroundColor White
+        Write-Host "  - Docker Desktop may need manual configuration" -ForegroundColor White
+        Write-Host ""
+        Write-Host "Please:" -ForegroundColor Yellow
+        Write-Host "  1. Check Docker Desktop window for error messages" -ForegroundColor White
+        Write-Host "  2. Ensure virtualization is enabled in BIOS" -ForegroundColor White
+        Write-Host "  3. Install WSL 2 if prompted by Docker Desktop" -ForegroundColor White
+        Write-Host "  4. Start Docker Desktop manually and wait for it to fully start" -ForegroundColor White
+        Write-Host "  5. Run this script again" -ForegroundColor White
+        exit 1
+    }
+    
+    # Give Docker a few more seconds to fully initialize
+    Write-Host "  Giving Docker a moment to fully initialize..." -ForegroundColor Gray
+    Start-Sleep -Seconds 5
+}
+
 # Check if Docker is running
 Write-Host "Checking if Docker is running..." -ForegroundColor Yellow
-try {
-    # Use docker info which fails more reliably if Docker daemon isn't accessible
-    $dockerInfo = docker info 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw "Docker daemon not accessible"
+if (-not (Test-DockerRunning)) {
+    Write-Host "[!] Docker Desktop is not running" -ForegroundColor Yellow
+    Write-Host ""
+    
+    # Check if Docker Desktop process exists (might be starting)
+    $dockerProcess = Get-Process -Name "Docker Desktop" -ErrorAction SilentlyContinue
+    if ($dockerProcess) {
+        Write-Host "Docker Desktop process detected but not ready yet..." -ForegroundColor Yellow
+        Write-Host "Waiting for Docker Desktop to be ready..." -ForegroundColor Yellow
+        Write-Host ""
+        
+        $maxWait = 60
+        $waited = 0
+        $checkInterval = 3
+        
+        while (-not (Test-DockerRunning) -and $waited -lt $maxWait) {
+            Start-Sleep -Seconds $checkInterval
+            $waited += $checkInterval
+            if ($waited % 10 -eq 0) {
+                Write-Host "  Still waiting... ($waited seconds)" -ForegroundColor Gray
+            }
+        }
+        
+        if (-not (Test-DockerRunning)) {
+            Write-Host "[X] Docker Desktop is running but not responding" -ForegroundColor Red
+            Write-Host "Please check Docker Desktop for errors and try again." -ForegroundColor Yellow
+            exit 1
+        }
+    } else {
+        # Docker Desktop is not running, try to start it
+        Start-DockerDesktop
     }
+} else {
     Write-Host "[OK] Docker is running" -ForegroundColor Green
-} catch {
-    Write-Host "[X] Docker is not running or Docker Desktop is not started" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "Please:" -ForegroundColor Yellow
-    Write-Host "  1. Start Docker Desktop from the Start menu" -ForegroundColor White
-    Write-Host "  2. Wait for Docker Desktop to fully start (whale icon in system tray)" -ForegroundColor White
-    Write-Host "  3. Run this script again" -ForegroundColor White
-    Write-Host ""
-    Write-Host "If Docker Desktop is already running, try:" -ForegroundColor Yellow
-    Write-Host "  - Restart Docker Desktop" -ForegroundColor White
-    Write-Host "  - Check Docker Desktop logs for errors" -ForegroundColor White
-    exit 1
 }
 
 Write-Host ""
