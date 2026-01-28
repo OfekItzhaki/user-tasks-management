@@ -116,8 +116,8 @@ public class TasksController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving tasks");
-            return StatusCode(500, "An error occurred while retrieving tasks.");
+            _logger.LogError(ex, "Error retrieving tasks: {Message}\n{StackTrace}", ex.Message, ex.StackTrace);
+            return StatusCode(500, $"An error occurred while retrieving tasks. Error: {ex.Message}");
         }
     }
 
