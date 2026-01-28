@@ -269,6 +269,19 @@ try {
     # Ignore errors - containers might not exist or already removed
 }
 
+# Give Docker a moment to fully remove containers
+Start-Sleep -Seconds 2
+
+# Verify containers are removed before proceeding
+$remainingContainers = docker ps -a --filter "name=taskmanagement" --format "{{.Names}}" 2>$null
+if ($remainingContainers) {
+    Write-Host "  [X] Warning: Some containers still exist, attempting force removal..." -ForegroundColor Yellow
+    foreach ($container in $remainingContainers) {
+        docker rm -f $container 2>&1 | Out-Null
+    }
+    Start-Sleep -Seconds 1
+}
+
 Write-Host "Pulling images and starting containers..." -ForegroundColor Gray
 Write-Host ""
 
