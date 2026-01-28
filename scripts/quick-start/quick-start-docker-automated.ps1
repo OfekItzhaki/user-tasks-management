@@ -86,11 +86,10 @@ if (-not $prerequisitesOk) {
 # Function to check if Docker Desktop is running
 function Test-DockerRunning {
     try {
-        # Use a timeout to prevent hanging if Docker is slow
-        $job = Start-Job -ScriptBlock { docker info 2>&1 | Out-Null; return $LASTEXITCODE }
-        $result = Wait-Job -Job $job -Timeout 3 | Receive-Job
-        Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
-        return $result -eq 0
+        # Use docker version instead of docker info - faster and less resource intensive
+        # docker version is much faster than docker info and still verifies Docker is accessible
+        $null = docker version --format '{{.Server.Version}}' 2>&1 | Out-Null
+        return $LASTEXITCODE -eq 0
     } catch {
         return $false
     }
@@ -198,12 +197,12 @@ if (-not (Test-DockerRunning)) {
     $dockerProcess = Get-Process -Name "Docker Desktop" -ErrorAction SilentlyContinue
     if ($dockerProcess) {
         Write-Host "Docker Desktop process detected but not ready yet..." -ForegroundColor Yellow
-        Write-Host "Waiting for Docker Desktop to be ready..." -ForegroundColor Yellow
+        Write-Host "Waiting for Docker Desktop to be ready (up to 60 seconds)..." -ForegroundColor Yellow
         Write-Host ""
         
-        $maxWait = 60
+        $maxWait = 60 # 1 minute max wait
         $waited = 0
-        $checkInterval = 3
+        $checkInterval = 2 # Check every 2 seconds (faster detection)
         
         while (-not (Test-DockerRunning) -and $waited -lt $maxWait) {
             Start-Sleep -Seconds $checkInterval
@@ -214,10 +213,12 @@ if (-not (Test-DockerRunning)) {
         }
         
         if (-not (Test-DockerRunning)) {
-            Write-Host "[X] Docker Desktop is running but not responding" -ForegroundColor Red
+            Write-Host "[X] Docker Desktop is running but not responding after $maxWait seconds" -ForegroundColor Red
             Write-Host "Please check Docker Desktop for errors and try again." -ForegroundColor Yellow
+            Write-Host "You can also try restarting Docker Desktop manually." -ForegroundColor Yellow
             exit 1
         }
+        Write-Host "[OK] Docker Desktop is now ready!" -ForegroundColor Green
     } else {
         # Docker Desktop is not running, try to start it
         Start-DockerDesktop
