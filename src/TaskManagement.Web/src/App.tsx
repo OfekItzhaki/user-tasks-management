@@ -33,7 +33,6 @@ function App() {
   const tasks = useAppSelector((state) => state.tasks.tasks);
   const loading = useAppSelector((state) => state.tasks.loading);
   const error = useAppSelector((state) => state.tasks.error);
-  const selectedTask = useAppSelector((state) => state.tasks.selectedTask);
   const pagination = useAppSelector((state) => state.tasks.pagination);
   const tagIds = useAppSelector((state) => state.tasks.filters.tagIds) ?? [];
   const priorities = useAppSelector((state) => state.tasks.filters.priorities) ?? [];

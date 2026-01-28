@@ -24,6 +24,6 @@ export const taskSchema = yup.object({
     }),
   priority: yup.number().required('Priority is required').oneOf([1, 2, 3, 4], 'Invalid priority').min(1, 'Priority is required'),
   createdByUserId: yup.number().required('Created by user is required').min(1, 'Please select a user'),
-  userIds: yup.array().of(yup.number()).min(1, 'At least one user must be assigned'),
-  tagIds: yup.array().of(yup.number()).required('At least one tag must be selected').min(1, 'At least one tag must be selected'),
+  userIds: yup.array().of(yup.number().required()).min(1, 'At least one user must be assigned').required('At least one user must be assigned'),
+  tagIds: yup.array().of(yup.number().required()).required('At least one tag must be selected').min(1, 'At least one tag must be selected'),
 });

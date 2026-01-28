@@ -1,6 +1,8 @@
 import { FallbackProps } from 'react-error-boundary';
 
 export default function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  
   return (
     <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950 px-4">
       <div className="max-w-lg w-full glass-card p-6">
@@ -12,7 +14,7 @@ export default function ErrorFallback({ error, resetErrorBoundary }: FallbackPro
         </p>
 
         <pre className="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded text-xs text-gray-800 dark:text-gray-200 overflow-auto">
-          {error?.message ?? String(error)}
+          {errorMessage}
         </pre>
 
         <div className="mt-4 flex gap-2">
