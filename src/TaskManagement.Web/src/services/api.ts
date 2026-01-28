@@ -25,7 +25,7 @@ apiClient.interceptors.response.use(
 
 export const taskApi = {
   getAll: async (params?: GetTasksParams): Promise<PagedResult<Task>> => {
-    const queryParams: any = { ...params };
+    const queryParams: Record<string, unknown> = { ...params };
     
     Object.keys(queryParams).forEach(key => {
       const value = queryParams[key];

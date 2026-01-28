@@ -116,10 +116,11 @@ function App() {
       setEditingTask(null);
       setShowForm(false);
       dispatch(fetchTasks());
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to update task:', err);
       // Handle concurrency errors
-      if (err?.message?.includes('modified by another user') || err?.response?.data?.includes('modified')) {
+      const error = err as { message?: string; response?: { data?: string } };
+      if (error?.message?.includes('modified by another user') || error?.response?.data?.includes('modified')) {
         alert('This task has been modified by another user. Please refresh and try again.');
         dispatch(fetchTasks()); // Refresh the task list
       }
