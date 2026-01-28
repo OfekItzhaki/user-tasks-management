@@ -86,10 +86,24 @@ if (-not $prerequisitesOk) {
 # Function to check if Docker Desktop is running
 function Test-DockerRunning {
     try {
-        # Use docker version instead of docker info - faster and less resource intensive
-        # docker version is much faster than docker info and still verifies Docker is accessible
-        $null = docker version --format '{{.Server.Version}}' 2>&1 | Out-Null
-        return $LASTEXITCODE -eq 0
+        # Use a job with timeout to prevent hanging
+        $job = Start-Job -ScriptBlock {
+            docker version --format '{{.Server.Version}}' 2>&1 | Out-Null
+            return $LASTEXITCODE
+        }
+        
+        # Wait for job with 2 second timeout
+        $result = Wait-Job -Job $job -Timeout 2 | Receive-Job -ErrorAction SilentlyContinue
+        Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+        
+        # If job timed out, Docker is not responding
+        if ($job.State -eq "Running") {
+            Stop-Job -Job $job -ErrorAction SilentlyContinue
+            Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+            return $false
+        }
+        
+        return $result -eq 0
     } catch {
         return $false
     }
