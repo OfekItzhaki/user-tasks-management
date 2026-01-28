@@ -115,6 +115,30 @@ Write-Host "  Press Enter after running the command..." -ForegroundColor Gray
 $null = Read-Host
 
 Write-Host ""
+Write-Host "Step 6: Verify Installation" -ForegroundColor Yellow
+Write-Host "  Run these commands to verify:" -ForegroundColor White
+Write-Host "  dotnet --version    # Should show 8.0.x" -ForegroundColor Cyan
+Write-Host "  node --version      # Should show 20.x or 22.x" -ForegroundColor Cyan
+Write-Host "  npm --version       # Should show 10.x or 11.x" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "  Press Enter after verifying..." -ForegroundColor Gray
+$null = Read-Host
+
+Write-Host ""
+Write-Host "Step 7: Seed Database (Optional)" -ForegroundColor Yellow
+Write-Host "  After the API starts, seed the database with sample data:" -ForegroundColor White
+Write-Host "  POST http://localhost:5063/api/seed" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "  Or use Swagger UI:" -ForegroundColor White
+Write-Host "  1. Open http://localhost:5063/swagger" -ForegroundColor Cyan
+Write-Host "  2. Find POST /api/seed endpoint" -ForegroundColor Cyan
+Write-Host "  3. Click 'Try it out' then 'Execute'" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "  This will create sample users, tags, and tasks for testing." -ForegroundColor Gray
+Write-Host "  Press Enter to continue..." -ForegroundColor Gray
+$null = Read-Host
+
+Write-Host ""
 Write-Host "========================================" -ForegroundColor Green
 Write-Host "All steps completed!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green

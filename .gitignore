@@ -97,3 +97,7 @@ Thumbs.db
 
 # Docker
 docker-compose.override.yml
+
+# Extra instructions (development notes, not needed for running the project)
+Extra instructions/
+extra instructions/

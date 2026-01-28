@@ -126,6 +126,97 @@ if (Test-Path $startScript) {
 }
 
 Write-Host ""
+
+# Step 3: Verify Installation
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "Step 3: Verifying Installation..." -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
+
+Write-Host "Checking installed versions:" -ForegroundColor Yellow
+$dotnetVersion = dotnet --version
+$nodeVersion = node --version
+$npmVersion = npm --version
+
+Write-Host "  ✓ .NET SDK: $dotnetVersion" -ForegroundColor Green
+Write-Host "  ✓ Node.js: $nodeVersion" -ForegroundColor Green
+Write-Host "  ✓ npm: $npmVersion" -ForegroundColor Green
+
+Write-Host ""
+Write-Host "Verifying database setup..." -ForegroundColor Yellow
+$apiPath = Join-Path $PSScriptRoot "..\..\src\TaskManagement.API"
+Push-Location $apiPath
+try {
+    # Check if migrations are applied
+    dotnet ef migrations list --project ..\TaskManagement.Infrastructure 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "  ✓ Database migrations verified" -ForegroundColor Green
+    } else {
+        Write-Host "  ⚠ Database migrations may need to be applied" -ForegroundColor Yellow
+    }
+} catch {
+    Write-Host "  ⚠ Could not verify database migrations" -ForegroundColor Yellow
+}
+Pop-Location
+
+Write-Host ""
+Write-Host "Verifying frontend dependencies..." -ForegroundColor Yellow
+$webPath = Join-Path $PSScriptRoot "..\..\src\TaskManagement.Web"
+if (Test-Path (Join-Path $webPath "node_modules")) {
+    Write-Host "  ✓ Frontend dependencies installed" -ForegroundColor Green
+} else {
+    Write-Host "  ⚠ Frontend dependencies not found" -ForegroundColor Yellow
+}
+
+Write-Host ""
+
+# Step 4: Offer to seed database
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "Step 4: Database Seeding (Optional)" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Would you like to seed the database with sample data?" -ForegroundColor Yellow
+Write-Host "This will create sample users, tags, and tasks for testing." -ForegroundColor Gray
+Write-Host ""
+$seedChoice = Read-Host "Seed database? (y/n)"
+
+if ($seedChoice -eq "y" -or $seedChoice -eq "Y") {
+    Write-Host ""
+    Write-Host "Waiting for API to be ready..." -ForegroundColor Yellow
+    $apiReady = $false
+    $maxWait = 30
+    $waited = 0
+    
+    while (-not $apiReady -and $waited -lt $maxWait) {
+        try {
+            $response = Invoke-WebRequest -Uri "http://localhost:5063/api/seed" -Method POST -TimeoutSec 2 -ErrorAction SilentlyContinue
+            if ($response.StatusCode -eq 200) {
+                $apiReady = $true
+                Write-Host "  ✓ Database seeded successfully!" -ForegroundColor Green
+            }
+        } catch {
+            Start-Sleep -Seconds 2
+            $waited += 2
+            Write-Host "." -NoNewline -ForegroundColor Gray
+        }
+    }
+    
+    if (-not $apiReady) {
+        Write-Host ""
+        Write-Host "  ⚠ Could not seed database automatically" -ForegroundColor Yellow
+        Write-Host "  You can seed it manually after the API starts:" -ForegroundColor Gray
+        Write-Host "    POST http://localhost:5063/api/seed" -ForegroundColor Cyan
+        Write-Host "    Or use Swagger UI: http://localhost:5063/swagger" -ForegroundColor Cyan
+    }
+} else {
+    Write-Host ""
+    Write-Host "Skipping database seeding." -ForegroundColor Gray
+    Write-Host "You can seed it later:" -ForegroundColor Gray
+    Write-Host "  POST http://localhost:5063/api/seed" -ForegroundColor Cyan
+    Write-Host "  Or use Swagger UI: http://localhost:5063/swagger" -ForegroundColor Cyan
+}
+
+Write-Host ""
 Write-Host "========================================" -ForegroundColor Green
 Write-Host "All done! Services are starting..." -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
@@ -133,6 +224,11 @@ Write-Host ""
 Write-Host "Access points:" -ForegroundColor Cyan
 Write-Host "  • Frontend: http://localhost:5173" -ForegroundColor White
 Write-Host "  • API Swagger: http://localhost:5063/swagger" -ForegroundColor White
+Write-Host ""
+Write-Host "Installation verified:" -ForegroundColor Cyan
+Write-Host "  • .NET SDK: $dotnetVersion" -ForegroundColor White
+Write-Host "  • Node.js: $nodeVersion" -ForegroundColor White
+Write-Host "  • npm: $npmVersion" -ForegroundColor White
 Write-Host ""
 Write-Host "Note: RabbitMQ is optional. Windows Service will work without it." -ForegroundColor Yellow
 Write-Host ""

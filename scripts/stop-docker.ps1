@@ -47,16 +47,18 @@ try {
 Write-Host ""
 
 # Get project root directory (where docker-compose.yml is)
-$projectRoot = $PSScriptRoot
-if (Test-Path (Join-Path $PSScriptRoot "..\docker-compose.yml")) {
-    $projectRoot = Join-Path $PSScriptRoot ".."
-}
+$projectRoot = Join-Path $PSScriptRoot ".."
+$dockerComposePath = Join-Path $projectRoot "docker\docker-compose.yml"
 
 Push-Location $projectRoot
 
 Write-Host "Stopping Docker containers..." -ForegroundColor Yellow
 try {
-    & $composeCommand.Split(' ') down
+    if ($composeCommand -eq "docker compose") {
+        docker compose -f $dockerComposePath down
+    } else {
+        docker-compose -f $dockerComposePath down
+    }
     if ($LASTEXITCODE -eq 0) {
         Write-Host "✓ Docker containers stopped" -ForegroundColor Green
     } else {

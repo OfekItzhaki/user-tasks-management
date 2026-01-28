@@ -1,124 +1,142 @@
-# Quick Start Scripts
+# Scripts Directory
 
-This folder contains scripts to quickly set up and run the Task Management System.
+This folder contains all PowerShell scripts for the Task Management System.
 
-## Available Scripts
+## Directory Structure
 
-### Docker Setup (Recommended)
+```
+scripts/
+├── quick-start/          # Quick start scripts (4 files)
+├── setup.ps1            # Automated setup (LocalDB)
+├── setup-docker.ps1     # Automated setup (Docker)
+├── start-all.ps1        # Start all services
+├── run.ps1              # Quick run script
+├── run-all-tests.ps1    # Run all tests (backend + frontend)
+├── stop-docker.ps1      # Stop Docker services
+├── verify-services.ps1  # Verify service status
+└── README.md            # This file
+```
+
+## Quick Start Scripts
+
+Located in `scripts/quick-start/`:
 
 1. **`quick-start-docker-automated.ps1`** - Fully automated Docker setup
-   - Checks all prerequisites
-   - Starts Docker services (SQL Server + RabbitMQ)
-   - Runs setup script
-   - Starts all services
-   - **Best for**: First-time setup or when you want everything done automatically
-
-2. **`quick-start-docker-manual.ps1`** - Manual Docker setup with guided steps
-   - Checks prerequisites
-   - Shows you each command to run
-   - Waits for you to complete each step
-   - **Best for**: Learning the process or troubleshooting
-
-### Local Setup (Without Docker)
-
+2. **`quick-start-docker-manual.ps1`** - Manual Docker setup with guidance
 3. **`quick-start-local-automated.ps1`** - Fully automated LocalDB setup
-   - Checks prerequisites
-   - Uses SQL Server LocalDB (no Docker needed)
-   - Runs setup script
-   - Starts all services
-   - **Best for**: When Docker is not available or preferred
+4. **`quick-start-local-manual.ps1`** - Manual LocalDB setup with guidance
 
-4. **`quick-start-local-manual.ps1`** - Manual LocalDB setup with guided steps
-   - Checks prerequisites
-   - Shows you each command to run
-   - Waits for you to complete each step
-   - **Best for**: Learning the process or troubleshooting
+See [quick-start/README.md](quick-start/README.md) for details.
 
-### Utility Scripts
+## Setup Scripts
 
-5. **`stop-docker.ps1`** - Stops all Docker containers
-   - Stops SQL Server and RabbitMQ containers
-   - **Best for**: When you want to free up resources
+### `setup.ps1`
+Automated setup script for LocalDB (no Docker required).
+- Checks prerequisites
+- Installs dotnet-ef tool
+- Sets up database (migrations)
+- Installs frontend dependencies
+- Builds the solution
+- Starts all services
 
-6. **`run-all-tests.ps1`** - Runs all tests (located in root directory)
-   - Runs backend (.NET) tests
-   - Runs frontend (Vitest) tests
-   - Shows summary of results
-   - **Usage**: `.\run-all-tests.ps1` (from project root)
-
-## How to Use
-
-### Quick Start (Recommended)
-
-**If you have Docker Desktop:**
+**Usage:**
 ```powershell
-.\scripts\quick-start-docker-automated.ps1
+.\scripts\setup.ps1
 ```
 
-**If you don't have Docker:**
+### `setup-docker.ps1`
+Automated setup script using Docker for SQL Server and RabbitMQ.
+- Checks prerequisites
+- Starts Docker services
+- Installs dotnet-ef tool
+- Sets up database (migrations)
+- Installs frontend dependencies
+- Builds the solution
+- Starts all services
+
+**Usage:**
 ```powershell
-.\scripts\quick-start-local-automated.ps1
+.\scripts\setup-docker.ps1
 ```
 
-### Manual Steps (For Learning)
+## Run Scripts
 
-**Docker:**
+### `start-all.ps1`
+Starts all services (API, Frontend, Windows Service) in separate windows.
+
+**Usage:**
 ```powershell
-.\scripts\quick-start-docker-manual.ps1
+.\scripts\start-all.ps1
 ```
 
-**Local:**
+### `run.ps1`
+Quick run script for existing setups (skips setup checks).
+
+**Usage:**
 ```powershell
-.\scripts\quick-start-local-manual.ps1
+.\scripts\run.ps1
 ```
 
-### Stop Docker Services
+### `run-all-tests.ps1`
+Runs both backend (.NET) and frontend (Vitest) tests.
 
+**Usage:**
+```powershell
+.\scripts\run-all-tests.ps1
+```
+
+## Utility Scripts
+
+### `stop-docker.ps1`
+Stops all Docker containers (SQL Server and RabbitMQ).
+
+**Usage:**
 ```powershell
 .\scripts\stop-docker.ps1
 ```
 
-## Prerequisites
+### `verify-services.ps1`
+Checks the status of all services (API, Frontend, RabbitMQ, SQL Server).
 
-All scripts check prerequisites automatically, but you'll need:
+**Usage:**
+```powershell
+.\scripts\verify-services.ps1
+```
 
-### For Docker Setup:
-- .NET 8.0 SDK
-- Node.js 20.19+ or 22.12+
-- Docker Desktop
+## Quick Reference
 
-### For Local Setup:
-- .NET 8.0 SDK
-- Node.js 20.19+ or 22.12+
-- SQL Server LocalDB (usually comes with Visual Studio)
+### First Time Setup
 
-## What Each Script Does
+**With Docker (Recommended):**
+```powershell
+.\scripts\quick-start\quick-start-docker-automated.ps1
+```
 
-### Automated Scripts:
-1. ✅ Check prerequisites (.NET, Node.js, Docker/LocalDB)
-2. ✅ Start Docker services (if using Docker)
-3. ✅ Install dotnet-ef tool (if needed)
-4. ✅ Run database migrations
-5. ✅ Install frontend dependencies
-6. ✅ Build the solution
-7. ✅ Start all services (API, Frontend, Windows Service)
+**Without Docker:**
+```powershell
+.\scripts\quick-start\quick-start-local-automated.ps1
+```
 
-### Manual Scripts:
-- Guide you through each step
-- Show you the exact commands to run
-- Wait for you to complete each step before continuing
+### Daily Use
 
-## Troubleshooting
+**Start everything:**
+```powershell
+.\scripts\start-all.ps1
+```
 
-If a script fails:
-1. Check the error message
-2. Verify prerequisites are installed
-3. Try the manual version to see which step fails
-4. Check [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) in the root directory
+**Run tests:**
+```powershell
+.\scripts\run-all-tests.ps1
+```
+
+**Stop Docker:**
+```powershell
+.\scripts\stop-docker.ps1
+```
 
 ## Notes
 
-- All scripts fix the .NET SDK PATH issue automatically
-- Scripts are designed to be run from the project root directory
-- Automated scripts will exit if prerequisites are missing
-- Manual scripts will guide you through installation if needed
+- All scripts automatically fix the .NET SDK PATH issue
+- Scripts should be run from the project root directory
+- Quick start scripts include database seeding options
+- All scripts provide clear feedback and error messages
