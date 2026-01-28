@@ -6,6 +6,43 @@ Write-Host "Service Verification" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
+# 0. Check Docker Desktop
+Write-Host "0. Checking Docker Desktop..." -ForegroundColor Yellow
+try {
+    $dockerVersion = docker --version 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "   ✓ Docker is installed: $dockerVersion" -ForegroundColor Green
+    } else {
+        Write-Host "   ✗ Docker is not installed or not in PATH" -ForegroundColor Red
+        Write-Host "     Install Docker Desktop from: https://www.docker.com/products/docker-desktop" -ForegroundColor Yellow
+        exit 1
+    }
+} catch {
+    Write-Host "   ✗ Docker is not installed or not in PATH" -ForegroundColor Red
+    Write-Host "     Install Docker Desktop from: https://www.docker.com/products/docker-desktop" -ForegroundColor Yellow
+    exit 1
+}
+
+try {
+    $dockerInfo = docker info 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "   ✓ Docker Desktop is running" -ForegroundColor Green
+    } else {
+        Write-Host "   ✗ Docker Desktop is NOT running" -ForegroundColor Red
+        Write-Host "     Start Docker Desktop from the Start menu or system tray" -ForegroundColor Yellow
+        Write-Host "     Wait for Docker to fully start (whale icon in system tray should be steady)" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "     After starting Docker Desktop, wait 10-20 seconds and run this script again" -ForegroundColor Cyan
+        exit 1
+    }
+} catch {
+    Write-Host "   ✗ Docker Desktop is NOT running" -ForegroundColor Red
+    Write-Host "     Start Docker Desktop from the Start menu or system tray" -ForegroundColor Yellow
+    exit 1
+}
+
+Write-Host ""
+
 # 1. Check RabbitMQ Container
 Write-Host "1. Checking RabbitMQ..." -ForegroundColor Yellow
 $rabbitmqContainer = docker ps --filter "name=rabbitmq" --format "{{.Names}}" | Select-Object -First 1
