@@ -292,46 +292,79 @@ if (Test-Path $serviceAppsettingsPath) {
     }
 }
 
-# Restore NuGet packages first
+# Restore NuGet packages first (restore entire solution from project root)
 Write-Host "Restoring NuGet packages..." -ForegroundColor Yellow
-Set-Location $apiPath
+$originalLocation = Get-Location
 try {
-    dotnet restore --project "..\TaskManagement.Infrastructure" 2>&1 | Out-Null
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "[OK] NuGet packages restored" -ForegroundColor Green
+    # Try to restore from solution file first
+    $solutionFile = Get-ChildItem -Path "." -Filter "*.sln" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($solutionFile) {
+        Write-Host "  Restoring solution: $($solutionFile.Name)" -ForegroundColor Gray
+        dotnet restore $solutionFile.FullName 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[OK] NuGet packages restored" -ForegroundColor Green
+        } else {
+            Write-Host "[!] Solution restore failed, trying project restore..." -ForegroundColor Yellow
+            # Fallback to project restore
+            Set-Location $apiPath
+            dotnet restore 2>&1 | Out-Null
+            Set-Location "..\.."
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "[OK] NuGet packages restored" -ForegroundColor Green
+            } else {
+                Write-Host "[X] Failed to restore NuGet packages" -ForegroundColor Red
+                exit 1
+            }
+        }
     } else {
-        Write-Host "[!] Warning: Restore had issues, but continuing..." -ForegroundColor Yellow
+        # No solution file, restore from API project
+        Write-Host "  No solution file found, restoring from API project..." -ForegroundColor Gray
+        Set-Location $apiPath
+        dotnet restore 2>&1 | Out-Null
+        Set-Location "..\.."
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[OK] NuGet packages restored" -ForegroundColor Green
+        } else {
+            Write-Host "[X] Failed to restore NuGet packages" -ForegroundColor Red
+            exit 1
+        }
     }
 } catch {
-    Write-Host "[!] Warning: Restore failed, but continuing: $_" -ForegroundColor Yellow
+    Write-Host "[X] Error restoring packages: $_" -ForegroundColor Red
+    exit 1
 }
-Set-Location "..\.."
 Write-Host ""
 
 # Run migrations
 Write-Host "Running database migrations..." -ForegroundColor Yellow
 Set-Location $apiPath
 try {
-    # Try with --no-build first (faster if already built)
-    dotnet ef database update --project "..\TaskManagement.Infrastructure" --no-build 2>&1 | Out-Null
+    # Restore and build the Infrastructure project explicitly before migrations
+    Write-Host "  Ensuring Infrastructure project is restored and built..." -ForegroundColor Gray
+    dotnet restore --project "..\TaskManagement.Infrastructure" 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[X] Failed to restore Infrastructure project" -ForegroundColor Red
+        Set-Location "..\.."
+        exit 1
+    }
+    
+    dotnet build --project "..\TaskManagement.Infrastructure" --no-restore 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[X] Failed to build Infrastructure project" -ForegroundColor Red
+        Set-Location "..\.."
+        exit 1
+    }
+    
+    # Now run migrations
+    Write-Host "  Running migrations..." -ForegroundColor Gray
+    dotnet ef database update --project "..\TaskManagement.Infrastructure"
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[OK] Database migrations applied" -ForegroundColor Green
     } else {
-        # If --no-build fails, restore and build first
-        Write-Host "Restoring and building project..." -ForegroundColor Yellow
-        dotnet restore --project "..\TaskManagement.Infrastructure" 2>&1 | Out-Null
-        dotnet build --project "..\TaskManagement.Infrastructure" --no-restore 2>&1 | Out-Null
-        
-        Write-Host "Running migrations..." -ForegroundColor Yellow
-        dotnet ef database update --project "..\TaskManagement.Infrastructure"
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "[OK] Database created and migrations applied" -ForegroundColor Green
-        } else {
-            Write-Host "[X] Database migration failed" -ForegroundColor Red
-            Write-Host "Make sure SQL Server container is running: docker ps" -ForegroundColor Yellow
-            Set-Location "..\.."
-            exit 1
-        }
+        Write-Host "[X] Database migration failed" -ForegroundColor Red
+        Write-Host "Make sure SQL Server container is running: docker ps" -ForegroundColor Yellow
+        Set-Location "..\.."
+        exit 1
     }
 } catch {
     Write-Host "[X] Error running migrations: $_" -ForegroundColor Red
