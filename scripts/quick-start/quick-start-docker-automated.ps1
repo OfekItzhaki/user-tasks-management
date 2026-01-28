@@ -249,14 +249,13 @@ try {
     Pop-Location
     
     # Also remove containers directly by name (in case they were created outside compose)
-    # Use a simpler filter that works reliably in PowerShell
+    # Just try to remove them - docker rm -f is safe even if container doesn't exist
     $containerNames = @("taskmanagement-sqlserver", "taskmanagement-rabbitmq", "taskmanagement-api", "taskmanagement-frontend", "taskmanagement-service")
     foreach ($containerName in $containerNames) {
-        # Check if container exists (running or stopped)
-        $existingContainer = docker ps -a --filter "name=$containerName" --format "{{.Names}}" 2>$null
-        if ($existingContainer -and $existingContainer -eq $containerName) {
-            Write-Host "  Removing existing container: $containerName" -ForegroundColor Yellow
-            docker rm -f $containerName 2>&1 | Out-Null
+        # Try to remove container (will fail silently if it doesn't exist)
+        $removeOutput = docker rm -f $containerName 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  Removed existing container: $containerName" -ForegroundColor Yellow
         }
     }
 } catch {
