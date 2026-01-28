@@ -106,10 +106,12 @@ Write-Host ""
 
 # 1. Start API
 Write-Host "1. Starting API (port 5063/7000)..." -ForegroundColor Cyan
+# Get project root (one level up from scripts folder)
+$projectRoot = Split-Path $PSScriptRoot -Parent
 $apiScript = @"
 `$env:DOTNET_ROOT = 'C:\Program Files\dotnet'
 `$env:PATH = 'C:\Program Files\dotnet;' + `$env:PATH
-cd '$PSScriptRoot\src\TaskManagement.API'
+cd '$projectRoot\src\TaskManagement.API'
 Write-Host 'API starting...' -ForegroundColor Green
 dotnet run
 "@
@@ -119,7 +121,7 @@ Start-Sleep -Seconds 3
 # 2. Start Frontend
 Write-Host "2. Starting Frontend (port 5173)..." -ForegroundColor Cyan
 $frontendScript = @"
-cd '$PSScriptRoot\src\TaskManagement.Web'
+cd '$projectRoot\src\TaskManagement.Web'
 Write-Host 'Frontend starting...' -ForegroundColor Green
 npm run dev
 "@
@@ -131,7 +133,7 @@ Write-Host "3. Starting Windows Service..." -ForegroundColor Cyan
 $serviceScript = @"
 `$env:DOTNET_ROOT = 'C:\Program Files\dotnet'
 `$env:PATH = 'C:\Program Files\dotnet;' + `$env:PATH
-cd '$PSScriptRoot\src\TaskManagement.WindowsService'
+cd '$projectRoot\src\TaskManagement.WindowsService'
 Write-Host 'Windows Service starting...' -ForegroundColor Green
 Write-Host 'Service will check for overdue tasks every minute' -ForegroundColor Cyan
 dotnet run
