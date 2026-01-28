@@ -111,9 +111,11 @@ $projectRoot = Split-Path $PSScriptRoot -Parent
 $apiScript = @"
 `$env:DOTNET_ROOT = 'C:\Program Files\dotnet'
 `$env:PATH = 'C:\Program Files\dotnet;' + `$env:PATH
+`$env:ASPNETCORE_ENVIRONMENT = 'Development'
+`$env:ASPNETCORE_URLS = 'http://localhost:5063'
 cd '$projectRoot\src\TaskManagement.API'
 Write-Host 'API starting...' -ForegroundColor Green
-dotnet run
+dotnet run --launch-profile http
 "@
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $apiScript
 Start-Sleep -Seconds 3
