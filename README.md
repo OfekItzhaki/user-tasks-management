@@ -4,10 +4,10 @@ A full-stack web application for managing user tasks with a .NET Core backend, R
 
 ## Quick Links
 
-- 🆕 **[FRESH_MACHINE_SETUP.md](FRESH_MACHINE_SETUP.md)** - **Start here if setting up on a new machine**
-- 📦 **[INSTALL.md](INSTALL.md)** - First time setup
-- 🚀 **[RUN.md](RUN.md)** - How to run the application
-- 🔧 **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and fixes
+- 🆕 **[FRESH_MACHINE_SETUP.md](instructions/FRESH_MACHINE_SETUP.md)** - **Start here if setting up on a new machine**
+- 📦 **[INSTALL.md](instructions/INSTALL.md)** - First time setup
+- 🚀 **[RUN.md](instructions/RUN.md)** - How to run the application
+- 🔧 **[TROUBLESHOOTING.md](instructions/TROUBLESHOOTING.md)** - Common issues and fixes
 
 ## Table of Contents
 
