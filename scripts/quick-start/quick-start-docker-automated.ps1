@@ -242,25 +242,27 @@ Write-Host "Cleaning up any existing containers..." -ForegroundColor Gray
 # Remove containers directly by name first (most reliable method)
 $containerNames = @("taskmanagement-sqlserver", "taskmanagement-rabbitmq", "taskmanagement-api", "taskmanagement-frontend", "taskmanagement-service")
 foreach ($containerName in $containerNames) {
-    # Try to remove container - docker rm -f is safe even if container doesn't exist
-    $removeOutput = docker rm -f $containerName 2>&1
-    if ($LASTEXITCODE -eq 0 -or $removeOutput -match "No such container") {
+    # Check if container exists first
+    $exists = docker ps -a --filter "name=$containerName" --format "{{.Names}}" 2>$null
+    if ($exists -and $exists.ToString().Trim() -eq $containerName) {
+        Write-Host "  Removing existing container: $containerName" -ForegroundColor Yellow
+        $removeOutput = docker rm -f $containerName 2>&1
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "  Removed existing container: $containerName" -ForegroundColor Yellow
+            Write-Host "    [OK] Removed: $containerName" -ForegroundColor Green
+        } else {
+            Write-Host "    [X] Failed to remove: $containerName - $removeOutput" -ForegroundColor Red
         }
-    } else {
-        # Show error but continue - might be a different issue
-        Write-Host "  Warning: Could not remove $containerName : $removeOutput" -ForegroundColor Yellow
     }
 }
 
 # Also try docker compose down to remove containers created by compose
+Write-Host "  Running docker compose down..." -ForegroundColor Gray
 try {
     Push-Location $projectRoot
     if ($composeCommand -eq "docker compose") {
-        docker compose -f $dockerComposePath --project-directory $projectRoot down 2>&1 | Out-Null
+        $composeOutput = docker compose -f $dockerComposePath --project-directory $projectRoot down 2>&1
     } else {
-        docker-compose -f $dockerComposePath --project-directory $projectRoot down 2>&1 | Out-Null
+        $composeOutput = docker-compose -f $dockerComposePath --project-directory $projectRoot down 2>&1
     }
     Pop-Location
 } catch {
