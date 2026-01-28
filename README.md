@@ -430,7 +430,11 @@ POST /api/tasks
 
 ### 🆕 Easiest Way: First Setup (Recommended)
 
-**Double-click `First setup.bat`** in the project root folder!
+**Double-click `First setup.bat`** in the project root folder, or run:
+
+```powershell
+.\First setup.ps1
+```
 
 This will:
 1. Prompt you to choose between **Docker** or **Local** setup
@@ -1031,7 +1035,8 @@ UserTasks/
 │   ├── TaskManagement.WindowsService/ # Background service for reminders
 │   ├── TaskManagement.Web/          # React frontend (TypeScript)
 │   └── TaskManagement.Tests/        # Unit & integration tests
-├── First setup.bat                   # First-time setup (double-click to run, prompts for Docker/Local)
+├── First setup.bat                   # First-time setup launcher (double-click to run)
+├── First setup.ps1                  # First-time setup script (prompts for Docker/Local)
 ├── scripts/
 │   ├── quick-start/
 │   │   ├── quick-start-docker-automated.ps1  # Fully automated Docker setup
@@ -1054,9 +1059,8 @@ UserTasks/
 ### Common Commands
 
 ```powershell
-# First-time setup (easiest - double-click First setup.bat)
-# Or run from PowerShell:
-powershell.exe -ExecutionPolicy Bypass -File "First setup.bat"
+# First-time setup (easiest - double-click First setup.bat or run this)
+.\First setup.ps1
 
 # Or run quick-start scripts directly:
 .\scripts\quick-start\quick-start-docker-automated.ps1  # Docker setup
