@@ -7,28 +7,6 @@ using TaskManagement.Infrastructure.RabbitMQ;
 using TaskManagement.WindowsService.Services;
 using Microsoft.Extensions.Logging;
 
-// Create a temporary logger for RabbitMQ startup check
-var tempLogger = LoggerFactory.Create(loggingBuilder => loggingBuilder
-    .AddConsole(options =>
-    {
-        options.FormatterName = "simple";
-    })
-    .AddSimpleConsole(options =>
-    {
-        options.IncludeScopes = false;
-        options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
-        options.ColorBehavior = Microsoft.Extensions.Logging.Console.LoggerColorBehavior.Enabled;
-    })).CreateLogger("Program");
-
-// Check if RabbitMQ is running, and try to start it if not
-if (!IsRabbitMQRunning())
-{
-    tempLogger.LogInformation("RabbitMQ is not running. Attempting to start it...");
-    TryStartRabbitMQ(tempLogger);
-}
-
-var builder = Host.CreateApplicationBuilder(args);
-
 // Helper function to check if RabbitMQ is running
 static bool IsRabbitMQRunning()
 {
@@ -121,6 +99,26 @@ static void TryStartRabbitMQ(ILogger logger)
     {
         logger.LogWarning(ex, "Error attempting to start RabbitMQ. Please start it manually: docker compose -f docker/docker-compose.yml up -d rabbitmq");
     }
+}
+
+// Create a temporary logger for RabbitMQ startup check
+var tempLogger = LoggerFactory.Create(loggingBuilder => loggingBuilder
+    .AddConsole(options =>
+    {
+        options.FormatterName = "simple";
+    })
+    .AddSimpleConsole(options =>
+    {
+        options.IncludeScopes = false;
+        options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
+        options.ColorBehavior = Microsoft.Extensions.Logging.Console.LoggerColorBehavior.Enabled;
+    })).CreateLogger("Program");
+
+// Check if RabbitMQ is running, and try to start it if not
+if (!IsRabbitMQRunning())
+{
+    tempLogger.LogInformation("RabbitMQ is not running. Attempting to start it...");
+    TryStartRabbitMQ(tempLogger);
 }
 
 var builder = Host.CreateApplicationBuilder(args);
