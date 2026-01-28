@@ -1,5 +1,6 @@
 # Task Management System - Quick Run Script
-# Assumes everything is already set up, just starts the services
+# Assumes everything is already set up
+# Note: Use start-all.ps1 for automatic startup of all services, just starts the services
 
 $ErrorActionPreference = "Stop"
 
