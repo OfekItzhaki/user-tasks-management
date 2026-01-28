@@ -23,11 +23,9 @@ export const PrioritySelector: React.FC<PrioritySelectorProps> = ({
     if (multiple) {
       if (selectedPriorities.includes(priority)) {
         const newPriorities = selectedPriorities.filter((p) => p !== priority);
-        console.log('newPriorities', newPriorities);
         onChange(newPriorities);
       } else {
         const newPriorities = [...selectedPriorities, priority];
-        console.log('newPriorities', newPriorities);
         onChange(newPriorities);
       }
     } else {

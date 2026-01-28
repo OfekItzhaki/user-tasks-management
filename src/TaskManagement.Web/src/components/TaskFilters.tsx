@@ -99,7 +99,7 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
       {/* Filters Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Priority Filter - Multi-select */}
-        <div style={{ position: 'relative', zIndex: 1000, isolation: 'isolate', overflow: 'visible' }}>
+        <div>
           <PrioritySelector
             selectedPriorities={selectedPriorities}
             onChange={(selected) => {
@@ -131,7 +131,7 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
         </div>
 
         {/* Tag Filter - Multi-select */}
-        <div style={{ position: 'relative', zIndex: 1000, isolation: 'isolate', overflow: 'visible' }}>
+        <div>
           <TagSelector
             tags={tags}
             selectedTagIds={selectedTagIds}

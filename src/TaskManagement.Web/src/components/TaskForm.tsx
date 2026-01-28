@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { CreateTaskDto, Priority, Tag } from '../types';
 import { TagSelector } from './TagSelector';
-import { PrioritySelector } from './PrioritySelector';
+import { PriorityDropdown } from './PriorityDropdown';
 import { taskSchema } from '../schemas/taskSchema';
 
 interface TaskFormProps {
@@ -46,16 +46,13 @@ export const TaskForm: React.FC<TaskFormProps> = ({
 
   const selectedTagIds = watch('tagIds');
   const selectedUserIds = watch('userIds');
-  const [selectedPriorities, setSelectedPriorities] = useState<Priority[]>(
-    initialData?.priority ? [initialData.priority] : [Priority.Medium]
-  );
+  const selectedPriority = watch('priority');
 
   useEffect(() => {
     if (initialData?.tagIds) {
       setValue('tagIds', initialData.tagIds);
     }
     if (initialData?.priority) {
-      setSelectedPriorities([initialData.priority]);
       setValue('priority', initialData.priority);
     }
   }, [initialData, setValue]);
@@ -64,18 +61,8 @@ export const TaskForm: React.FC<TaskFormProps> = ({
     setValue('tagIds', tagIds, { shouldValidate: true });
   };
 
-  const handlePriorityChange = (priorities: Priority[]) => {
-    setSelectedPriorities(priorities);
-    // Use the highest priority (Critical > High > Medium > Low)
-    // Ensure at least one priority is selected
-    if (priorities.length === 0) {
-      const defaultPriority = Priority.Medium;
-      setSelectedPriorities([defaultPriority]);
-      setValue('priority', defaultPriority, { shouldValidate: true });
-    } else {
-      const highestPriority = priorities.reduce((highest, current) => current > highest ? current : highest, priorities[0]);
-      setValue('priority', highestPriority, { shouldValidate: true });
-    }
+  const handlePriorityChange = (priority: Priority) => {
+    setValue('priority', priority, { shouldValidate: true });
   };
 
   const onSubmitHandler = (data: CreateTaskDto) => {
@@ -88,10 +75,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
         return;
       }
     }
-    // Ensure priority is set from selectedPriorities
-    if (selectedPriorities.length > 0) {
-      data.priority = selectedPriorities.reduce((highest, current) => current > highest ? current : highest, selectedPriorities[0]);
-    }
+    // Priority is already set from the form
     onSubmit(data);
   };
 
@@ -138,19 +122,11 @@ export const TaskForm: React.FC<TaskFormProps> = ({
         {errors.dueDate && <span className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.dueDate.message}</span>}
       </div>
 
-      <div>
-        <PrioritySelector
-          selectedPriorities={selectedPriorities}
-          onChange={handlePriorityChange}
-          multiple={true}
-        />
-        {errors.priority && <span className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.priority.message}</span>}
-        {selectedPriorities.length > 1 && (
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Multiple priorities selected. Highest priority ({Priority[selectedPriorities.reduce((highest, current) => current > highest ? current : highest, selectedPriorities[0])]}) will be saved.
-          </p>
-        )}
-      </div>
+      <PriorityDropdown
+        selectedPriority={selectedPriority || Priority.Medium}
+        onChange={handlePriorityChange}
+        error={errors.priority?.message}
+      />
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Users *</label>
