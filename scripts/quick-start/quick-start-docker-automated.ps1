@@ -204,24 +204,55 @@ if (-not (Test-DockerRunning)) {
     $dockerProcess = Get-Process -Name "Docker Desktop" -ErrorAction SilentlyContinue
     if ($dockerProcess) {
         Write-Host "Docker Desktop process detected but not ready yet..." -ForegroundColor Yellow
-        Write-Host "Waiting for Docker Desktop to be ready..." -ForegroundColor Yellow
+        Write-Host "Waiting for Docker Desktop to be ready (this may take up to 3 minutes)..." -ForegroundColor Yellow
+        Write-Host "  Docker Desktop can take time to fully initialize, especially on first start" -ForegroundColor Gray
         Write-Host ""
         
-        $maxWait = 60
+        $maxWait = 180  # Increased to 3 minutes
         $waited = 0
-        $checkInterval = 3
+        $checkInterval = 5
         
         while (-not (Test-DockerRunning) -and $waited -lt $maxWait) {
             Start-Sleep -Seconds $checkInterval
             $waited += $checkInterval
-            if ($waited % 10 -eq 0) {
-                Write-Host "  Still waiting... ($waited seconds)" -ForegroundColor Gray
+            
+            # Show progress every 15 seconds
+            if ($waited % 15 -eq 0) {
+                $minutes = [math]::Floor($waited / 60)
+                $seconds = $waited % 60
+                if ($minutes -gt 0) {
+                    Write-Host "  Still waiting... ($minutes min $seconds sec)" -ForegroundColor Gray
+                } else {
+                    Write-Host "  Still waiting... ($waited seconds)" -ForegroundColor Gray
+                }
+            }
+            
+            # Check if process is still running
+            $dockerProcess = Get-Process -Name "Docker Desktop" -ErrorAction SilentlyContinue
+            if (-not $dockerProcess) {
+                Write-Host "[!] Docker Desktop process disappeared. It may have crashed." -ForegroundColor Yellow
+                Write-Host "Please check Docker Desktop and try starting it manually." -ForegroundColor Yellow
+                exit 1
             }
         }
         
         if (-not (Test-DockerRunning)) {
-            Write-Host "[X] Docker Desktop is running but not responding" -ForegroundColor Red
-            Write-Host "Please check Docker Desktop for errors and try again." -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "[X] Docker Desktop is running but not responding after $maxWait seconds" -ForegroundColor Red
+            Write-Host ""
+            Write-Host "This usually means:" -ForegroundColor Yellow
+            Write-Host "  - Docker Desktop is still initializing (wait a bit longer)" -ForegroundColor White
+            Write-Host "  - Virtualization is not enabled in BIOS" -ForegroundColor White
+            Write-Host "  - WSL 2 is not installed or configured" -ForegroundColor White
+            Write-Host "  - Docker Desktop needs manual configuration" -ForegroundColor White
+            Write-Host ""
+            Write-Host "Try:" -ForegroundColor Yellow
+            Write-Host "  1. Open Docker Desktop and check for error messages" -ForegroundColor White
+            Write-Host "  2. Wait a few more minutes for Docker Desktop to fully start" -ForegroundColor White
+            Write-Host "  3. Restart Docker Desktop manually" -ForegroundColor White
+            Write-Host "  4. Check Docker Desktop Settings > General > Use WSL 2 based engine" -ForegroundColor White
+            Write-Host ""
+            Write-Host "Once Docker Desktop is ready, run this script again." -ForegroundColor Yellow
             exit 1
         }
     } else {
