@@ -55,9 +55,9 @@ Push-Location $projectRoot
 Write-Host "Stopping Docker containers..." -ForegroundColor Yellow
 try {
     if ($composeCommand -eq "docker compose") {
-        docker compose -f $dockerComposePath down
+        docker compose -f $dockerComposePath --project-directory $projectRoot down
     } else {
-        docker-compose -f $dockerComposePath down
+        docker-compose -f $dockerComposePath --project-directory $projectRoot down
     }
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[OK] Docker containers stopped" -ForegroundColor Green

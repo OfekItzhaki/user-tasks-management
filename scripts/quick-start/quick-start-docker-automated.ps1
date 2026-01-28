@@ -238,13 +238,16 @@ Write-Host "Starting Docker services (this may take a few minutes on first run).
 Write-Host "Pulling images and starting containers..." -ForegroundColor Gray
 Write-Host ""
 
+# Docker Compose uses the compose file's directory as base for relative paths
+# We need to specify --project-directory to use the project root
 Push-Location $projectRoot
 try {
     # Run docker compose - let output show naturally
+    # Use --project-directory to ensure build contexts resolve correctly
     if ($composeCommand -eq "docker compose") {
-        docker compose -f $dockerComposePath up -d sqlserver rabbitmq
+        docker compose -f $dockerComposePath --project-directory $projectRoot up -d sqlserver rabbitmq
     } else {
-        docker-compose -f $dockerComposePath up -d sqlserver rabbitmq
+        docker-compose -f $dockerComposePath --project-directory $projectRoot up -d sqlserver rabbitmq
     }
     $dockerExitCode = $LASTEXITCODE
 } catch {
@@ -274,9 +277,9 @@ if ($dockerExitCode -ne 0) {
             Push-Location $projectRoot
             try {
                 if ($composeCommand -eq "docker compose") {
-                    docker compose -f $dockerComposePath up -d sqlserver rabbitmq
+                    docker compose -f $dockerComposePath --project-directory $projectRoot up -d sqlserver rabbitmq
                 } else {
-                    docker-compose -f $dockerComposePath up -d sqlserver rabbitmq
+                    docker-compose -f $dockerComposePath --project-directory $projectRoot up -d sqlserver rabbitmq
                 }
                 $retryExitCode = $LASTEXITCODE
             } catch {

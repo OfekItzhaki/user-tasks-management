@@ -190,12 +190,16 @@ Write-Host ""
 # Use docker compose (newer) or docker-compose (older)
 $composeCommand = if (Test-Command "docker compose") { "docker compose" } else { "docker-compose" }
 
-$dockerComposePath = "docker\docker-compose.yml"
+# Get project root (script is in scripts/ folder, so go up one level)
+$projectRoot = Join-Path $PSScriptRoot ".."
+$dockerComposePath = Join-Path $projectRoot "docker\docker-compose.yml"
+
 try {
+    Push-Location $projectRoot
     if ($composeCommand -eq "docker compose") {
-        docker compose -f $dockerComposePath up -d
+        docker compose -f $dockerComposePath --project-directory $projectRoot up -d
     } else {
-        docker-compose -f $dockerComposePath up -d
+        docker-compose -f $dockerComposePath --project-directory $projectRoot up -d
     }
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[X] Failed to start Docker services" -ForegroundColor Red

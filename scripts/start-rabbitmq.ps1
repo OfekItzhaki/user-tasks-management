@@ -34,7 +34,7 @@ if (-not (Test-Path $dockerComposePath)) {
 Write-Host "Starting RabbitMQ container..." -ForegroundColor Yellow
 Push-Location $projectRoot
 try {
-    docker compose -f $dockerComposePath up -d rabbitmq
+    docker compose -f $dockerComposePath --project-directory $projectRoot up -d rabbitmq
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[OK] RabbitMQ started successfully" -ForegroundColor Green
         Write-Host ""
