@@ -22,6 +22,21 @@ static bool IsRabbitMQRunning()
     }
 }
 
+// Helper function to check if SQL Server is running
+static bool IsSqlServerRunning()
+{
+    try
+    {
+        using var tcpClient = new TcpClient();
+        tcpClient.Connect("localhost", 1433);
+        return true;
+    }
+    catch
+    {
+        return false;
+    }
+}
+
 // Helper function to start RabbitMQ using Docker
 static void TryStartRabbitMQ(ILogger logger)
 {
@@ -191,6 +206,14 @@ var tempLogger = LoggerFactory.Create(loggingBuilder => loggingBuilder
         options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
         options.ColorBehavior = Microsoft.Extensions.Logging.Console.LoggerColorBehavior.Enabled;
     })).CreateLogger("Program");
+
+// Check if SQL Server is running (critical dependency)
+if (!IsSqlServerRunning())
+{
+    tempLogger.LogWarning("SQL Server is not accessible on localhost:1433. The service may not function correctly.");
+    tempLogger.LogWarning("Please ensure SQL Server Docker container is running: docker compose -f docker/docker-compose.yml up -d sqlserver");
+    tempLogger.LogWarning("Or if using LocalDB, ensure it's started: sqllocaldb start mssqllocaldb");
+}
 
 // Check if RabbitMQ is running, and try to start it if not
 if (!IsRabbitMQRunning())
