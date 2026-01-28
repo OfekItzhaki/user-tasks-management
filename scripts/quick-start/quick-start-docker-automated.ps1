@@ -203,8 +203,76 @@ function Start-DockerDesktop {
     Start-Sleep -Seconds 5
 }
 
+# Function to check for stuck Docker Desktop state and fix it
+function Test-AndFixDockerStuckState {
+    $dockerProcess = Get-Process -Name "Docker Desktop" -ErrorAction SilentlyContinue
+    $daemonAccessible = Test-DockerRunning
+    
+    # Check for stuck state: process exists but daemon not accessible, or multiple processes
+    if ($dockerProcess -and -not $daemonAccessible) {
+        $isStuck = $false
+        $reason = ""
+        
+        if ($dockerProcess.Count -gt 1) {
+            $isStuck = $true
+            $reason = "Multiple Docker Desktop processes detected (stuck state)"
+        } elseif (-not $daemonAccessible) {
+            $isStuck = $true
+            $reason = "Docker Desktop process running but daemon not accessible"
+        }
+        
+        if ($isStuck) {
+            Write-Host "[!] Detected stuck Docker Desktop state: $reason" -ForegroundColor Yellow
+            Write-Host "  Automatically fixing by restarting Docker Desktop..." -ForegroundColor Cyan
+            Write-Host ""
+            
+            # Stop all Docker Desktop processes
+            Write-Host "  Stopping all Docker Desktop processes..." -ForegroundColor Gray
+            Get-Process -Name "Docker Desktop" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 3
+            
+            # Restart Docker Desktop
+            $dockerPaths = @(
+                "${env:ProgramFiles}\Docker\Docker\Docker Desktop.exe",
+                "${env:ProgramFiles(x86)}\Docker\Docker\Docker Desktop.exe",
+                "$env:LOCALAPPDATA\Docker\Docker Desktop.exe"
+            )
+            
+            $dockerExe = $null
+            foreach ($path in $dockerPaths) {
+                if (Test-Path $path) {
+                    $dockerExe = $path
+                    break
+                }
+            }
+            
+            if ($dockerExe) {
+                Write-Host "  Starting Docker Desktop..." -ForegroundColor Gray
+                Start-Process -FilePath $dockerExe -ErrorAction SilentlyContinue
+                Write-Host "  [OK] Docker Desktop restart initiated" -ForegroundColor Green
+                Write-Host ""
+                return $true # Indicates we restarted Docker
+            } else {
+                Write-Host "  [X] Could not find Docker Desktop executable" -ForegroundColor Red
+                return $false
+            }
+        }
+    }
+    
+    return $false # No stuck state detected
+}
+
 # Check if Docker is running
 Write-Host "Checking if Docker is running..." -ForegroundColor Yellow
+
+# First, check for stuck state and fix it automatically
+$wasRestarted = Test-AndFixDockerStuckState
+if ($wasRestarted) {
+    # Give Docker a moment to start after restart
+    Start-Sleep -Seconds 5
+    Write-Host "Waiting for Docker Desktop to initialize after restart..." -ForegroundColor Yellow
+}
+
 if (-not (Test-DockerRunning)) {
     Write-Host "[!] Docker Desktop is not running" -ForegroundColor Yellow
     Write-Host ""
