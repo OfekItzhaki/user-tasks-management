@@ -2,6 +2,12 @@
 
 A full-stack web application for managing user tasks with a .NET Core backend, React frontend, SQL Server database, and Windows Service with RabbitMQ integration.
 
+## Quick Links
+
+- 📦 **[INSTALL.md](INSTALL.md)** - First time setup
+- 🚀 **[RUN.md](RUN.md)** - How to run the application
+- 🔧 **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and fixes
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -9,10 +15,9 @@ A full-stack web application for managing user tasks with a .NET Core backend, R
 - [Features](#features)
 - [Technology Stack](#technology-stack)
 - [Prerequisites](#prerequisites)
-- [Setup Instructions](#setup-instructions)
+- [Quick Start](#quick-start)
 - [Database Schema](#database-schema)
 - [API Documentation](#api-documentation)
-- [Running the Application](#running-the-application)
 - [Testing](#testing)
 - [SQL Query](#sql-query)
 
