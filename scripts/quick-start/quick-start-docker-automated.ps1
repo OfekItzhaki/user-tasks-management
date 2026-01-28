@@ -235,13 +235,19 @@ $projectRoot = Join-Path $PSScriptRoot "..\.."
 $dockerComposePath = Join-Path $projectRoot "docker\docker-compose.yml"
 try {
     Push-Location $projectRoot
+    Write-Host "Starting Docker services (this may take a few minutes on first run)..." -ForegroundColor Yellow
+    Write-Host "Pulling images and starting containers..." -ForegroundColor Gray
+    Write-Host ""
+    
     if ($composeCommand -eq "docker compose") {
-        docker compose -f $dockerComposePath up -d sqlserver rabbitmq 2>&1 | Out-String | Out-Null
+        docker compose -f $dockerComposePath up -d sqlserver rabbitmq
     } else {
-        docker-compose -f $dockerComposePath up -d sqlserver rabbitmq 2>&1 | Out-String | Out-Null
+        docker-compose -f $dockerComposePath up -d sqlserver rabbitmq
     }
+    $dockerExitCode = $LASTEXITCODE
     Pop-Location
-    if ($LASTEXITCODE -ne 0) {
+    
+    if ($dockerExitCode -ne 0) {
         Write-Host "[X] Failed to start Docker services" -ForegroundColor Red
         Write-Host ""
         
@@ -290,9 +296,26 @@ try {
     Write-Host "  Waiting for services to be ready..." -ForegroundColor Yellow
     Start-Sleep -Seconds 15
 } catch {
-    Write-Host "[X] Error starting Docker services: $_" -ForegroundColor Red
+    $errorMessage = $_.Exception.Message
+    Write-Host "[X] Error starting Docker services" -ForegroundColor Red
     Write-Host ""
-    Write-Host "Make sure Docker Desktop is running and try again." -ForegroundColor Yellow
+    
+    # Check if it's a network/pull error
+    if ($errorMessage -like "*Pulling*" -or $errorMessage -like "*pull*" -or $errorMessage -like "*network*") {
+        Write-Host "This appears to be a network or image pull issue." -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "Possible solutions:" -ForegroundColor Cyan
+        Write-Host "  1. Check your internet connection" -ForegroundColor White
+        Write-Host "  2. Docker is pulling images (this can take several minutes)" -ForegroundColor White
+        Write-Host "  3. Try running the command manually to see full output:" -ForegroundColor White
+        Write-Host "     docker compose -f docker\docker-compose.yml up -d sqlserver rabbitmq" -ForegroundColor Gray
+        Write-Host ""
+        Write-Host "If images are being pulled, wait for them to complete and try again." -ForegroundColor Yellow
+    } else {
+        Write-Host "Error details: $errorMessage" -ForegroundColor Red
+        Write-Host ""
+        Write-Host "Make sure Docker Desktop is running and try again." -ForegroundColor Yellow
+    }
     exit 1
 }
 
