@@ -86,8 +86,17 @@ if (-not $prerequisitesOk) {
 # Function to check if Docker Desktop is running
 function Test-DockerRunning {
     try {
-        $dockerInfo = docker info 2>&1 | Out-Null
-        return $LASTEXITCODE -eq 0
+        # Try docker info with a timeout
+        $job = Start-Job -ScriptBlock { docker info 2>&1 | Out-Null; return $LASTEXITCODE }
+        $result = Wait-Job -Job $job -Timeout 5
+        if ($result) {
+            $exitCode = Receive-Job -Job $job
+            Remove-Job -Job $job -Force
+            return $exitCode -eq 0
+        } else {
+            Remove-Job -Job $job -Force
+            return $false
+        }
     } catch {
         return $false
     }
