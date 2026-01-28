@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Tag } from '../types';
 
 interface TagSelectorProps {
@@ -6,6 +6,7 @@ interface TagSelectorProps {
   selectedTagIds: number[];
   onChange: (tagIds: number[]) => void;
   multiple?: boolean;
+  variant?: 'chips' | 'dropdown';
 }
 
 export const TagSelector: React.FC<TagSelectorProps> = ({
@@ -13,7 +14,28 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
   selectedTagIds,
   onChange,
   multiple = true,
+  variant = 'chips',
 }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
   const handleTagToggle = (tagId: number) => {
     if (multiple) {
       if (selectedTagIds.includes(tagId)) {
@@ -28,6 +50,90 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
     }
   };
 
+  const getDisplayText = () => {
+    if (selectedTagIds.length === 0) {
+      return 'Select tags';
+    }
+    if (selectedTagIds.length === 1) {
+      const tag = tags.find(t => t.id === selectedTagIds[0]);
+      return tag ? tag.name : '1 tag selected';
+    }
+    return `${selectedTagIds.length} tags selected`;
+  };
+
+  // Dropdown variant for filtering
+  if (variant === 'dropdown') {
+    return (
+      <div className="relative" ref={dropdownRef} style={{ zIndex: 1000 }}>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Tags
+        </label>
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          disabled={tags.length === 0}
+          className="w-full premium-input text-left flex items-center justify-between disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span className={selectedTagIds.length > 0 ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}>
+            {getDisplayText()}
+          </span>
+          <svg
+            className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'transform rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {isOpen && tags.length > 0 && (
+          <div className="absolute w-full mt-1 glass-card border rounded-lg shadow-lg max-h-60 overflow-auto z-[1001]">
+            {tags.map((tag) => {
+              const isSelected = selectedTagIds.includes(tag.id);
+              return (
+                <label
+                  key={tag.id}
+                  className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleTagToggle(tag.id);
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleTagToggle(tag.id);
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleTagToggle(tag.id);
+                    }}
+                    className="w-4 h-4 text-gray-600 dark:text-primary-600 rounded focus:ring-gray-500 dark:focus:ring-primary-500 cursor-pointer"
+                  />
+                  <div className="flex items-center gap-2 flex-1 pointer-events-none">
+                    {tag.color && (
+                      <span
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: tag.color }}
+                      />
+                    )}
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{tag.name}</span>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Chip-based variant for task form
   return (
     <div className="relative">
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

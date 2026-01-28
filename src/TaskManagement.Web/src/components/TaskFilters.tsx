@@ -130,7 +130,7 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
           </select>
         </div>
 
-        {/* Tag Filter - Multi-select */}
+        {/* Tag Filter - Multi-select dropdown */}
         <div>
           <TagSelector
             tags={tags}
@@ -140,6 +140,7 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
               onTagIdsChange(valueToSet);
             }}
             multiple={true}
+            variant="dropdown"
           />
         </div>
       </div>
