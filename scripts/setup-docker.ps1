@@ -292,15 +292,37 @@ if (Test-Path $serviceAppsettingsPath) {
     }
 }
 
+# Restore NuGet packages first
+Write-Host "Restoring NuGet packages..." -ForegroundColor Yellow
+Set-Location $apiPath
+try {
+    dotnet restore --project "..\TaskManagement.Infrastructure" 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "[OK] NuGet packages restored" -ForegroundColor Green
+    } else {
+        Write-Host "[!] Warning: Restore had issues, but continuing..." -ForegroundColor Yellow
+    }
+} catch {
+    Write-Host "[!] Warning: Restore failed, but continuing: $_" -ForegroundColor Yellow
+}
+Set-Location "..\.."
+Write-Host ""
+
 # Run migrations
 Write-Host "Running database migrations..." -ForegroundColor Yellow
 Set-Location $apiPath
 try {
+    # Try with --no-build first (faster if already built)
     dotnet ef database update --project "..\TaskManagement.Infrastructure" --no-build 2>&1 | Out-Null
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[OK] Database migrations applied" -ForegroundColor Green
     } else {
-        Write-Host "Running migrations (first time)..." -ForegroundColor Yellow
+        # If --no-build fails, restore and build first
+        Write-Host "Restoring and building project..." -ForegroundColor Yellow
+        dotnet restore --project "..\TaskManagement.Infrastructure" 2>&1 | Out-Null
+        dotnet build --project "..\TaskManagement.Infrastructure" --no-restore 2>&1 | Out-Null
+        
+        Write-Host "Running migrations..." -ForegroundColor Yellow
         dotnet ef database update --project "..\TaskManagement.Infrastructure"
         if ($LASTEXITCODE -eq 0) {
             Write-Host "[OK] Database created and migrations applied" -ForegroundColor Green
