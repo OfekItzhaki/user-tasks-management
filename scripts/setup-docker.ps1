@@ -239,7 +239,9 @@ Write-Host ""
 Write-Host "Docker services are running:" -ForegroundColor Cyan
 Write-Host "  - SQL Server: localhost:1433" -ForegroundColor White
 Write-Host "  - RabbitMQ: localhost:5672" -ForegroundColor White
-Write-Host "  - RabbitMQ Management: http://localhost:15672 (guest/guest)" -ForegroundColor White
+Write-Host "  - RabbitMQ Management: http://localhost:15672
+    Username: guest
+    Password: guest" -ForegroundColor White
 Write-Host ""
 
 # Check if dotnet-ef is installed
@@ -481,7 +483,9 @@ Write-Host ""
 Write-Host "Access points:" -ForegroundColor Cyan
 Write-Host "  - Frontend: http://localhost:5173" -ForegroundColor White
 Write-Host "  - API Swagger: http://localhost:5063/swagger" -ForegroundColor White
-Write-Host "  - RabbitMQ Management: http://localhost:15672 (guest/guest)" -ForegroundColor White
+Write-Host "  - RabbitMQ Management: http://localhost:15672
+    Username: guest
+    Password: guest" -ForegroundColor White
 Write-Host ""
 Write-Host "Docker services:" -ForegroundColor Cyan
 Write-Host "  - View logs: docker compose logs -f" -ForegroundColor Gray
