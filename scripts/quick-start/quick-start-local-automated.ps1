@@ -189,7 +189,7 @@ if ($seedChoice -eq "y" -or $seedChoice -eq "Y") {
     
     while (-not $apiReady -and $waited -lt $maxWait) {
         try {
-            $response = Invoke-WebRequest -Uri "http://localhost:5063/api/seed" -Method POST -TimeoutSec 2 -ErrorAction SilentlyContinue
+            $response = Invoke-WebRequest -Uri "http://localhost:5063/api/seed" -Method POST -TimeoutSec 2 -UseBasicParsing -ErrorAction SilentlyContinue
             if ($response.StatusCode -eq 200) {
                 $apiReady = $true
                 Write-Host "  [OK] Database seeded successfully!" -ForegroundColor Green

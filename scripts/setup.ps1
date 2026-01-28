@@ -62,7 +62,7 @@ function Test-SqlLocalDB {
 # Function to check RabbitMQ
 function Test-RabbitMQ {
     try {
-        $response = Invoke-WebRequest -Uri "http://localhost:15672" -TimeoutSec 2 -ErrorAction SilentlyContinue
+        $response = Invoke-WebRequest -Uri "http://localhost:15672" -TimeoutSec 2 -UseBasicParsing -ErrorAction SilentlyContinue
         if ($response.StatusCode -eq 200) {
             Write-Host "[OK] RabbitMQ is running" -ForegroundColor Green
             return $true
