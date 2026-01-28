@@ -1,8 +1,11 @@
+using System.Diagnostics;
+using System.Net.NetworkInformation;
 using Microsoft.EntityFrameworkCore;
 using TaskManagement.Infrastructure;
 using TaskManagement.Infrastructure.Data;
 using TaskManagement.Infrastructure.RabbitMQ;
 using TaskManagement.WindowsService.Services;
+using Microsoft.Extensions.Logging;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -41,5 +44,8 @@ builder.Services.AddSingleton<IRabbitMQService>(sp =>
 builder.Services.AddHostedService<TaskReminderService>();
 
 var host = builder.Build();
+
+// Auto-start RabbitMQ if not running
+await EnsureRabbitMQIsRunning(host.Services.GetRequiredService<ILogger<Program>>());
 
 host.Run();
