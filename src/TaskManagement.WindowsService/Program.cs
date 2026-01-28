@@ -37,9 +37,48 @@ static bool IsSqlServerRunning()
     }
 }
 
+// Helper function to check if Docker is running
+static bool IsDockerRunning(ILogger logger)
+{
+    try
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "docker",
+            Arguments = "ps",
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+        
+        using var process = Process.Start(startInfo);
+        if (process != null)
+        {
+            process.WaitForExit(2000); // 2 second timeout
+            return process.ExitCode == 0;
+        }
+        return false;
+    }
+    catch (Exception ex)
+    {
+        logger.LogDebug("Error checking Docker: {Error}", ex.Message);
+        return false;
+    }
+}
+
 // Helper function to start RabbitMQ using Docker
 static void TryStartRabbitMQ(ILogger logger)
 {
+    // First check if Docker is running
+    if (!IsDockerRunning(logger))
+    {
+        logger.LogWarning("Docker Desktop is not running. Cannot start RabbitMQ container.");
+        logger.LogWarning("Please start Docker Desktop and then start RabbitMQ manually:");
+        logger.LogWarning("  docker compose -f docker/docker-compose.yml up -d rabbitmq");
+        return;
+    }
+    
     try
     {
         // Find project root - try multiple strategies
