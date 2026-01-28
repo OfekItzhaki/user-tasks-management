@@ -6,6 +6,7 @@ using TaskManagement.Domain.Entities;
 using TaskManagement.Infrastructure.Data;
 using TaskManagement.Infrastructure.RabbitMQ;
 using System.Text.Json;
+using DomainTask = TaskManagement.Domain.Entities.Task;
 
 namespace TaskManagement.WindowsService.Services;
 
@@ -27,7 +28,7 @@ public class TaskReminderService : BackgroundService
         _rabbitMQService = rabbitMQService;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async System.Threading.Tasks.Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _rabbitMQService.StartConsuming(ReminderQueueName, ProcessReminder);
 
@@ -46,11 +47,11 @@ public class TaskReminderService : BackgroundService
                 _logger.LogError(ex, "Error checking overdue tasks");
             }
 
-            await Task.Delay(_checkInterval, stoppingToken);
+            await System.Threading.Tasks.Task.Delay(_checkInterval, stoppingToken);
         }
     }
 
-    private async Task CheckAndPublishOverdueTasks(CancellationToken cancellationToken)
+    private async System.Threading.Tasks.Task CheckAndPublishOverdueTasks(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<TaskManagementDbContext>();
