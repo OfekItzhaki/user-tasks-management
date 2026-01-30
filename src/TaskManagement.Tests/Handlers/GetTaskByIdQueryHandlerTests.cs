@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using TaskManagement.Application.Queries.Tasks;
 using TaskManagement.Domain.Entities;
 using TaskManagement.Domain.Enums;
@@ -73,7 +74,7 @@ public class GetTaskByIdQueryHandlerTests : IDisposable
     [Fact]
     public async System.Threading.Tasks.Task Handle_ValidId_ShouldReturnTask()
     {
-        var handler = new GetTaskByIdQueryHandler(_context);
+        var handler = new GetTaskByIdQueryHandler(_context, NullLogger<GetTaskByIdQueryHandler>.Instance);
         var query = new GetTaskByIdQuery { Id = 1 };
 
         var result = await handler.Handle(query, CancellationToken.None);
@@ -87,10 +88,10 @@ public class GetTaskByIdQueryHandlerTests : IDisposable
     [Fact]
     public async System.Threading.Tasks.Task Handle_InvalidId_ShouldThrowException()
     {
-        var handler = new GetTaskByIdQueryHandler(_context);
+        var handler = new GetTaskByIdQueryHandler(_context, NullLogger<GetTaskByIdQueryHandler>.Instance);
         var query = new GetTaskByIdQuery { Id = 999 };
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => handler.Handle(query, CancellationToken.None));
+        await Assert.ThrowsAsync<TaskManagement.Application.Exceptions.EntityNotFoundException>(() => handler.Handle(query, CancellationToken.None));
     }
 
     public void Dispose()

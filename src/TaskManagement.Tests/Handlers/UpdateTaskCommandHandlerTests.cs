@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using TaskManagement.Application.Commands.Tasks;
 using TaskManagement.Application.DTOs;
 using TaskManagement.Domain.Entities;
@@ -88,7 +89,7 @@ public class UpdateTaskCommandHandlerTests : IDisposable
     [Fact]
     public async System.Threading.Tasks.Task Handle_ValidCommand_ShouldUpdateTask()
     {
-        var handler = new UpdateTaskCommandHandler(_context);
+        var handler = new UpdateTaskCommandHandler(_context, NullLogger<UpdateTaskCommandHandler>.Instance);
         var command = new UpdateTaskCommand
         {
             Id = 1,
@@ -120,7 +121,7 @@ public class UpdateTaskCommandHandlerTests : IDisposable
     [Fact]
     public async System.Threading.Tasks.Task Handle_TaskNotFound_ShouldThrowException()
     {
-        var handler = new UpdateTaskCommandHandler(_context);
+        var handler = new UpdateTaskCommandHandler(_context, NullLogger<UpdateTaskCommandHandler>.Instance);
         var command = new UpdateTaskCommand
         {
             Id = 999,
@@ -135,7 +136,7 @@ public class UpdateTaskCommandHandlerTests : IDisposable
             }
         };
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => handler.Handle(command, CancellationToken.None));
+        await Assert.ThrowsAsync<TaskManagement.Application.Exceptions.EntityNotFoundException>(() => handler.Handle(command, CancellationToken.None));
     }
 
     public void Dispose()
