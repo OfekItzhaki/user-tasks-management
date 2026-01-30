@@ -2,7 +2,7 @@ namespace TaskManagement.Application.DTOs;
 
 public class TagDto
 {
-    public int Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string? Color { get; set; }
+    public int Id { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public string? Color { get; init; }
 }

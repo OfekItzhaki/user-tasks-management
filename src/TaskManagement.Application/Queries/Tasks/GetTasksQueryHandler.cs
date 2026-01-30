@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using TaskManagement.Application.DTOs;
 using TaskManagement.Application.Mappings;
 using TaskManagement.Infrastructure.Data;
@@ -9,14 +10,26 @@ namespace TaskManagement.Application.Queries.Tasks;
 public class GetTasksQueryHandler : IRequestHandler<GetTasksQuery, PagedResult<TaskDto>>
 {
     private readonly TaskManagementDbContext _context;
+    private readonly ILogger<GetTasksQueryHandler> _logger;
 
-    public GetTasksQueryHandler(TaskManagementDbContext context)
+    public GetTasksQueryHandler(TaskManagementDbContext context, ILogger<GetTasksQueryHandler> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     public async Task<PagedResult<TaskDto>> Handle(GetTasksQuery request, CancellationToken cancellationToken)
     {
+        _logger.LogDebug("Getting tasks: Page={Page}, PageSize={PageSize}, SearchTerm={SearchTerm}", request.Page, request.PageSize, request.SearchTerm ?? "(none)");
+        // Sanitize inputs at the application layer
+        var sanitizedSearchTerm = Common.InputSanitizer.Sanitize(request.SearchTerm);
+        var sanitizedSortBy = string.IsNullOrWhiteSpace(request.SortBy) 
+            ? "createdAt" 
+            : Common.InputSanitizer.Sanitize(request.SortBy);
+        var sanitizedSortOrder = string.IsNullOrWhiteSpace(request.SortOrder) 
+            ? "desc" 
+            : Common.InputSanitizer.Sanitize(request.SortOrder).ToLower();
+
         var query = _context.Tasks
             .Include(t => t.UserTasks)
                 .ThenInclude(ut => ut.User)
@@ -24,9 +37,9 @@ public class GetTasksQueryHandler : IRequestHandler<GetTasksQuery, PagedResult<T
                 .ThenInclude(tt => tt.Tag)
             .AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        if (!string.IsNullOrWhiteSpace(sanitizedSearchTerm))
         {
-            var searchTerm = request.SearchTerm.ToLower();
+            var searchTerm = sanitizedSearchTerm.ToLower();
             query = query.Where(t => 
                 t.Title.ToLower().Contains(searchTerm) || 
                 t.Description.ToLower().Contains(searchTerm));
@@ -50,18 +63,18 @@ public class GetTasksQueryHandler : IRequestHandler<GetTasksQuery, PagedResult<T
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
-        query = request.SortBy?.ToLower() switch
+        query = sanitizedSortBy.ToLower() switch
         {
-            "title" => request.SortOrder?.ToLower() == "asc" 
+            "title" => sanitizedSortOrder == "asc" 
                 ? query.OrderBy(t => t.Title) 
                 : query.OrderByDescending(t => t.Title),
-            "duedate" => request.SortOrder?.ToLower() == "asc" 
+            "duedate" => sanitizedSortOrder == "asc" 
                 ? query.OrderBy(t => t.DueDate) 
                 : query.OrderByDescending(t => t.DueDate),
-            "priority" => request.SortOrder?.ToLower() == "asc" 
+            "priority" => sanitizedSortOrder == "asc" 
                 ? query.OrderBy(t => t.Priority) 
                 : query.OrderByDescending(t => t.Priority),
-            _ => request.SortOrder?.ToLower() == "asc" 
+            _ => sanitizedSortOrder == "asc" 
                 ? query.OrderBy(t => t.CreatedAt) 
                 : query.OrderByDescending(t => t.CreatedAt)
         };
@@ -74,6 +87,7 @@ public class GetTasksQueryHandler : IRequestHandler<GetTasksQuery, PagedResult<T
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
+        _logger.LogInformation("Returned {Count} tasks (page {Page}, total {TotalCount})", tasks.Count, page, totalCount);
         return new PagedResult<TaskDto>
         {
             Items = tasks.Select(t => t.ToTaskDto()).ToList(),

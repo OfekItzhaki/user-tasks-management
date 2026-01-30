@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using TaskManagement.Application.DTOs;
+using TaskManagement.Application.Exceptions;
 using TaskManagement.Application.Mappings;
 using TaskManagement.Infrastructure.Data;
 
@@ -9,14 +11,17 @@ namespace TaskManagement.Application.Commands.Tasks;
 public class UpdateTaskCommandHandler : IRequestHandler<UpdateTaskCommand, TaskDto>
 {
     private readonly TaskManagementDbContext _context;
+    private readonly ILogger<UpdateTaskCommandHandler> _logger;
 
-    public UpdateTaskCommandHandler(TaskManagementDbContext context)
+    public UpdateTaskCommandHandler(TaskManagementDbContext context, ILogger<UpdateTaskCommandHandler> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     public async Task<TaskDto> Handle(UpdateTaskCommand request, CancellationToken cancellationToken)
     {
+        _logger.LogDebug("Updating task: {TaskId}", request.Id);
         var task = await _context.Tasks
             .Include(t => t.UserTasks)
                 .ThenInclude(ut => ut.User)
@@ -26,7 +31,8 @@ public class UpdateTaskCommandHandler : IRequestHandler<UpdateTaskCommand, TaskD
 
         if (task == null)
         {
-            throw new KeyNotFoundException($"Task with ID {request.Id} not found.");
+            _logger.LogWarning("Task not found for update: {TaskId}", request.Id);
+            throw new EntityNotFoundException("Task", request.Id, $"Task with ID {request.Id} not found.");
         }
 
         // Optimistic concurrency check - set original value for EF Core to compare
@@ -108,6 +114,7 @@ public class UpdateTaskCommandHandler : IRequestHandler<UpdateTaskCommand, TaskD
             .Include(tt => tt.Tag)
             .LoadAsync(cancellationToken);
 
+        _logger.LogInformation("Updated task {TaskId}: {Title}", task.Id, task.Title);
         return task.ToTaskDto();
     }
 }

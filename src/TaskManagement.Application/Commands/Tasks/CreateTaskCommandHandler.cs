@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using TaskManagement.Application.DTOs;
 using TaskManagement.Application.Mappings;
 using TaskManagement.Domain.Entities;
@@ -11,14 +12,17 @@ namespace TaskManagement.Application.Commands.Tasks;
 public class CreateTaskCommandHandler : IRequestHandler<CreateTaskCommand, TaskDto>
 {
     private readonly TaskManagementDbContext _context;
+    private readonly ILogger<CreateTaskCommandHandler> _logger;
 
-    public CreateTaskCommandHandler(TaskManagementDbContext context)
+    public CreateTaskCommandHandler(TaskManagementDbContext context, ILogger<CreateTaskCommandHandler> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     public async Task<TaskDto> Handle(CreateTaskCommand request, CancellationToken cancellationToken)
     {
+        _logger.LogDebug("Creating task: {Title}", request.Task.Title);
         var task = new Domain.Entities.Task
         {
             Title = Common.InputSanitizer.Sanitize(request.Task.Title),
@@ -84,6 +88,7 @@ public class CreateTaskCommandHandler : IRequestHandler<CreateTaskCommand, TaskD
             .Include(tt => tt.Tag)
             .LoadAsync(cancellationToken);
 
+        _logger.LogInformation("Created task {TaskId}: {Title}", task.Id, task.Title);
         return task.ToTaskDto();
     }
 }
