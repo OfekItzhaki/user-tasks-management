@@ -1,150 +1,155 @@
 using System.Text;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
 namespace TaskManagement.Infrastructure.RabbitMQ;
 
-public interface IRabbitMQService
-{
-    void PublishMessage(string queueName, string message);
-    void StartConsuming(string queueName, Action<string> onMessageReceived);
-    void Dispose();
-}
-
 public class RabbitMQService : IRabbitMQService, IDisposable
 {
-    private IConnection? _connection;
-    private IModel? _channel;
+    private readonly RabbitMQConnection _connection;
     private readonly ILogger<RabbitMQService> _logger;
-    private readonly string _hostName;
-    private bool _isConnected = false;
+    private string? _consumerTag;
+    private volatile int _inFlightCount;
+    private readonly object _inFlightLock = new();
+    private const int ShutdownWaitSeconds = 30;
 
     public RabbitMQService(ILogger<RabbitMQService> logger, string hostName = "localhost")
     {
         _logger = logger;
-        _hostName = hostName;
-        TryConnect();
+        _connection = new RabbitMQConnection(logger, hostName);
     }
 
-    private void TryConnect()
+    public void PublishMessage(string queueName, string message, IReadOnlyDictionary<string, string>? headers = null)
     {
-        const int maxRetries = 5;
-        int[] retryDelays = { 2000, 4000, 8000, 16000, 0 }; // Last delay is 0 (no wait after final attempt)
-        
-        for (int attempt = 0; attempt < maxRetries; attempt++)
+        if (!EnsureConnected())
         {
-            try
-            {
-                var factory = new ConnectionFactory { HostName = _hostName };
-                _connection = factory.CreateConnection();
-                _channel = _connection.CreateModel();
-                _isConnected = true;
-                _logger.LogInformation("Successfully connected to RabbitMQ at {HostName} (attempt {Attempt}/{MaxRetries})", _hostName, attempt + 1, maxRetries);
-                return; // Success - exit retry loop
-            }
-            catch (Exception ex)
-            {
-                if (attempt < maxRetries - 1)
-                {
-                    int delay = retryDelays[attempt];
-                    _logger.LogWarning("Failed to connect to RabbitMQ at {HostName} (attempt {Attempt}/{MaxRetries}). Retrying in {Delay}ms... Error: {Error}", 
-                        _hostName, attempt + 1, maxRetries, delay, ex.Message);
-                    System.Threading.Thread.Sleep(delay);
-                }
-                else
-                {
-                    // Final attempt failed
-                    _logger.LogWarning(ex, "Failed to connect to RabbitMQ at {HostName} after {MaxRetries} attempts. Service will continue but reminders won't be processed. Start RabbitMQ with: docker compose -f docker/docker-compose.yml up -d rabbitmq", 
-                        _hostName, maxRetries);
-                    _isConnected = false;
-                }
-            }
-        }
-    }
-
-    public void PublishMessage(string queueName, string message)
-    {
-        if (!_isConnected || _channel == null)
-        {
-            _logger.LogWarning("Cannot publish message: RabbitMQ is not connected. Attempting to reconnect...");
-            TryConnect();
-            if (!_isConnected || _channel == null)
-            {
-                _logger.LogError("Failed to publish message to queue {QueueName}: RabbitMQ is not available", queueName);
-                return;
-            }
+            _logger.LogError("Failed to publish message to queue {QueueName}: RabbitMQ is not available", queueName);
+            return;
         }
 
         try
         {
-            _channel.QueueDeclare(queue: queueName, durable: false, exclusive: false, autoDelete: false, arguments: null);
-
+            _connection.Channel!.QueueDeclare(queue: queueName, durable: true, exclusive: false, autoDelete: false, arguments: null);
             var body = Encoding.UTF8.GetBytes(message);
-
-            _channel.BasicPublish(exchange: "", routingKey: queueName, basicProperties: null, body: body);
+            var props = _connection.Channel.CreateBasicProperties();
+            props.Persistent = true;
+            if (headers != null && headers.Count > 0)
+            {
+                props.Headers = new Dictionary<string, object?>();
+                foreach (var (k, v) in headers)
+                    props.Headers[k] = v;
+            }
+            _connection.Channel.BasicPublish(exchange: "", routingKey: queueName, basicProperties: props, body: body);
             _logger.LogInformation("Published message to queue {QueueName}: {Message}", queueName, message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error publishing message to queue {QueueName}", queueName);
-            _isConnected = false;
+            _connection.MarkDisconnected();
         }
     }
 
-    public void StartConsuming(string queueName, Action<string> onMessageReceived)
+    public void StartConsuming(string queueName, Func<string, bool> onMessageReceived)
     {
-        if (!_isConnected || _channel == null)
+        if (!EnsureConnected())
         {
-            _logger.LogWarning("Cannot start consuming: RabbitMQ is not connected. Attempting to reconnect...");
-            TryConnect();
-            if (!_isConnected || _channel == null)
-            {
-                _logger.LogError("Failed to start consuming from queue {QueueName}: RabbitMQ is not available", queueName);
-                return;
-            }
+            _logger.LogError("Failed to start consuming from queue {QueueName}: RabbitMQ is not available", queueName);
+            return;
         }
 
         try
         {
-            _channel.QueueDeclare(queue: queueName, durable: false, exclusive: false, autoDelete: false, arguments: null);
-
-            var consumer = new EventingBasicConsumer(_channel);
-            consumer.Received += (model, ea) =>
+            _connection.Channel!.QueueDeclare(queue: queueName, durable: true, exclusive: false, autoDelete: false, arguments: null);
+            var consumer = new EventingBasicConsumer(_connection.Channel);
+            consumer.Received += (_, ea) =>
             {
+                Interlocked.Increment(ref _inFlightCount);
                 var body = ea.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
                 _logger.LogInformation("Received message from queue {QueueName}: {Message}", queueName, message);
-                onMessageReceived(message);
-                _channel?.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+                bool success = false;
+                try
+                {
+                    success = onMessageReceived(message);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing message from queue {QueueName}: {Message}", queueName, message);
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref _inFlightCount);
+                }
+                try
+                {
+                    if (success)
+                        _connection.Channel?.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+                    else
+                        _connection.Channel?.BasicNack(deliveryTag: ea.DeliveryTag, multiple: false, requeue: true);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error ack/nack for delivery {DeliveryTag}", ea.DeliveryTag);
+                }
             };
-
-            _channel.BasicConsume(queue: queueName, autoAck: false, consumer: consumer);
+            _consumerTag = _connection.Channel.BasicConsume(queue: queueName, autoAck: false, consumer: consumer);
             _logger.LogInformation("Started consuming from queue: {QueueName}", queueName);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error starting consumer for queue {QueueName}", queueName);
-            _isConnected = false;
+            _connection.MarkDisconnected();
         }
     }
 
-    public void Dispose()
+    public void StopConsuming()
     {
         try
         {
-            _channel?.Close();
-            _connection?.Close();
+            if (string.IsNullOrEmpty(_consumerTag))
+            {
+                _consumerTag = null;
+                return;
+            }
+
+            // Graceful shutdown: wait for in-flight messages to complete before cancelling
+            var deadline = DateTime.UtcNow.AddSeconds(ShutdownWaitSeconds);
+            while (_inFlightCount > 0 && DateTime.UtcNow < deadline)
+            {
+                _logger.LogDebug("Waiting for {Count} in-flight message(s) to complete before shutdown", _inFlightCount);
+                Thread.Sleep(100);
+            }
+
+            if (_inFlightCount > 0)
+            {
+                _logger.LogWarning("Shutdown timeout: {Count} message(s) still in flight. Cancelling consumer.", _inFlightCount);
+            }
+
+            if (_connection.Channel?.IsOpen == true)
+            {
+                _connection.Channel.BasicCancel(_consumerTag!);
+                _logger.LogInformation("Stopped consuming (consumer tag: {ConsumerTag})", _consumerTag);
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Error closing RabbitMQ connection");
+            _logger.LogWarning(ex, "Error stopping consumer");
         }
         finally
         {
-            _channel?.Dispose();
-            _connection?.Dispose();
+            _consumerTag = null;
         }
     }
+
+    private bool EnsureConnected()
+    {
+        if (_connection.IsConnected && _connection.Channel != null)
+            return true;
+        _logger.LogWarning("RabbitMQ is not connected. Attempting to reconnect...");
+        _connection.TryConnect();
+        return _connection.IsConnected && _connection.Channel != null;
+    }
+
+    public void Dispose() => _connection.Dispose();
 }
