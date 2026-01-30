@@ -60,7 +60,7 @@ The application is structured in layers, with dependencies pointing inward towar
 **Technologies**:
 - MediatR (CQRS implementation)
 - FluentValidation
-- AutoMapper
+- Manual entity-to-DTO mapping (in handlers)
 - Input sanitization utilities
 
 **Responsibilities**:
@@ -84,7 +84,7 @@ The application is structured in layers, with dependencies pointing inward towar
 **Components**:
 - DTOs (Data Transfer Objects) for request/response
 - Validators (FluentValidation) for input validation
-- Mappings (AutoMapper) for entity-to-DTO conversion
+- Manual mappings in handlers for entity-to-DTO conversion
 - Handlers (MediatR) for command/query processing
 
 ---
@@ -328,7 +328,7 @@ Each layer has a **single, well-defined responsibility**:
 |-------|-------------|
 | Frontend | React, TypeScript, Redux Toolkit, React Hook Form, Yup, Axios |
 | API | ASP.NET Core, Swagger, CORS |
-| Application | MediatR, FluentValidation, AutoMapper |
+| Application | MediatR, FluentValidation, manual mapping |
 | Domain | Pure C# (no dependencies) |
 | Infrastructure | Entity Framework Core, SQL Server, RabbitMQ.Client |
 | Windows Service | .NET Background Service, RabbitMQ.Client |

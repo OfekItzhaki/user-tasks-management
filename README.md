@@ -7,6 +7,7 @@ A full-stack web application for managing user tasks with a .NET Core backend, R
 - 🆕 **[FRESH_MACHINE_SETUP.md](instructions/FRESH_MACHINE_SETUP.md)** - **Start here if setting up on a new machine**
 - 📦 **[INSTALL.md](instructions/INSTALL.md)** - First time setup
 - 🚀 **[RUN.md](instructions/RUN.md)** - How to run the application
+- ⚙️ **[CONFIG.md](instructions/CONFIG.md)** - Connection strings and secrets (env / User Secrets)
 - 🔧 **[TROUBLESHOOTING.md](instructions/TROUBLESHOOTING.md)** - Common issues and fixes
 
 ## Table of Contents
@@ -61,7 +62,7 @@ The application follows **Clean Architecture** principles with **CQRS (Command Q
 │  └──────────────┘         └──────────────┘                 │
 │  - DTOs (Request/Response)                                  │
 │  - Validators (FluentValidation)                            │
-│  - Mappings (AutoMapper)                                    │
+│  - Mappings (manual entity-to-DTO conversion)                                    │
 └──────────────────────┬──────────────────────────────────────┘
                         │
 ┌──────────────────────▼──────────────────────────────────────┐
@@ -124,7 +125,7 @@ The application follows **Clean Architecture** principles with **CQRS (Command Q
 - **SQL Server** - Database
 - **MediatR** - CQRS implementation
 - **FluentValidation** - Validation
-- **AutoMapper** - Object mapping
+- **Manual mapping** - Entity-to-DTO conversion in handlers
 - **RabbitMQ.Client** - Message queuing
 
 ### Frontend

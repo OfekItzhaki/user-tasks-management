@@ -47,7 +47,7 @@ This guide helps you explain the project comprehensively, covering architecture,
 │         Application Layer (CQRS with MediatR)               │
 │  Commands: CreateTask, UpdateTask, DeleteTask               │
 │  Queries: GetTasks, GetTaskById, GetTasksWithMultipleTags  │
-│  - DTOs, Validators (FluentValidation), AutoMapper          │
+│  - DTOs, Validators (FluentValidation), manual mapping      │
 └──────────────────────┬──────────────────────────────────────┘
                         │
 ┌──────────────────────▼──────────────────────────────────────┐
