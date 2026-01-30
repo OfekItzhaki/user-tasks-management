@@ -7,6 +7,7 @@ namespace TaskManagement.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[ApiVersion("1.0")]
 public class TagsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -18,19 +19,16 @@ public class TagsController : ControllerBase
         _logger = logger;
     }
 
+    /// <summary>Gets all tags.</summary>
     [HttpGet]
-    public async Task<ActionResult<List<TagDto>>> GetTags()
+    [ProducesResponseType(typeof(List<TagDto>), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(429)]
+    [ProducesResponseType(500)]
+    public async Task<ActionResult<List<TagDto>>> GetTags(CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var query = new GetTagsQuery();
-            var tags = await _mediator.Send(query);
-            return Ok(tags);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving tags");
-            return StatusCode(500, "An error occurred while retrieving tags.");
-        }
+        var query = new GetTagsQuery();
+        var tags = await _mediator.Send(query, cancellationToken);
+        return Ok(tags);
     }
 }
