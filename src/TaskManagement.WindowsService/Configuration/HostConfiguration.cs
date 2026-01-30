@@ -42,7 +42,9 @@ public static class HostConfiguration
     private static void ConfigureServices(HostApplicationBuilder builder)
     {
         var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found. Set it via environment variable ConnectionStrings__DefaultConnection or User Secrets. See instructions/CONFIG.md.");
+        if (connectionString.Contains("***SET_VIA_ENV_OR_USER_SECRETS***", StringComparison.Ordinal))
+            throw new InvalidOperationException("Replace the placeholder connection string. Set ConnectionStrings:DefaultConnection via environment variable ConnectionStrings__DefaultConnection or User Secrets. See instructions/CONFIG.md.");
 
         builder.Services.AddDbContext<TaskManagementDbContext>(options =>
             options.UseSqlServer(connectionString, sqlOptions =>
@@ -52,6 +54,9 @@ public static class HostConfiguration
                     maxRetryDelay: TimeSpan.FromSeconds(30),
                     errorNumbersToAdd: null);
             }));
+
+        builder.Services.Configure<TaskReminderServiceOptions>(
+            builder.Configuration.GetSection(TaskReminderServiceOptions.SectionName));
 
         builder.Services.AddSingleton<IRabbitMQService>(sp =>
         {
@@ -66,10 +71,12 @@ public static class HostConfiguration
     public static void LogStartupInformation(IHost host, string connectionString, string environmentName)
     {
         var logger = host.Services.GetRequiredService<ILogger<Program>>();
+        var options = host.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<TaskReminderServiceOptions>>().Value;
         
         logger.LogInformation("========================================");
         logger.LogInformation("Windows Service Starting...");
-        logger.LogInformation("Service will check for overdue tasks every minute");
+        logger.LogInformation("Service will check for overdue tasks every {Interval} minute(s), queue: {QueueName}", 
+            options.CheckInterval.TotalMinutes, options.QueueName);
         logger.LogInformation("========================================");
 
         // Log connection string (mask password)

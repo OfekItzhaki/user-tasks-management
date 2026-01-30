@@ -1,56 +1,74 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using TaskManagement.Domain.Entities;
+using Microsoft.Extensions.Options;
+using System.Text.Json;
 using TaskManagement.Infrastructure.Data;
 using TaskManagement.Infrastructure.RabbitMQ;
-using System.Text.Json;
-using DomainTask = TaskManagement.Domain.Entities.Task;
+using TaskManagement.WindowsService.Models;
 
 namespace TaskManagement.WindowsService.Services;
+
+public class TaskReminderServiceOptions
+{
+    public const string SectionName = "TaskReminder";
+    public int CheckIntervalMinutes { get; set; } = 1;
+    public TimeSpan CheckInterval => TimeSpan.FromMinutes(Math.Max(1, CheckIntervalMinutes));
+    public string QueueName { get; set; } = "Reminder";
+}
 
 public class TaskReminderService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<TaskReminderService> _logger;
     private readonly IRabbitMQService _rabbitMQService;
-    private readonly TimeSpan _checkInterval = TimeSpan.FromMinutes(1);
-    private const string ReminderQueueName = "Remainder";
+    private readonly TaskReminderServiceOptions _options;
 
     public TaskReminderService(
         IServiceProvider serviceProvider,
         ILogger<TaskReminderService> logger,
-        IRabbitMQService rabbitMQService)
+        IRabbitMQService rabbitMQService,
+        IOptions<TaskReminderServiceOptions> options)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
         _rabbitMQService = rabbitMQService;
+        _options = options.Value;
     }
 
     protected override async System.Threading.Tasks.Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Task Reminder Service started. Checking for overdue tasks every {Interval} minute(s).", _checkInterval.TotalMinutes);
-        
-        // Try to start consuming (will log warning if RabbitMQ is not available)
-        _rabbitMQService.StartConsuming(ReminderQueueName, ProcessReminder);
+        _logger.LogInformation("Task Reminder Service started. Checking for overdue tasks every {Interval} minute(s), queue: {QueueName}.",
+            _options.CheckInterval.TotalMinutes, _options.QueueName);
 
-        while (!stoppingToken.IsCancellationRequested)
+        _rabbitMQService.StartConsuming(_options.QueueName, ProcessReminder);
+
+        // Graceful shutdown: stop consuming when host is stopping so no new messages are accepted
+        using var stopRegistration = stoppingToken.Register(() => _rabbitMQService.StopConsuming());
+
+        try
         {
-            try
+            while (!stoppingToken.IsCancellationRequested)
             {
-                await CheckAndPublishOverdueTasks(stoppingToken);
-            }
-            catch (Microsoft.Data.SqlClient.SqlException sqlEx)
-            {
-                _logger.LogError(sqlEx, "Database error checking overdue tasks. This may indicate a schema mismatch. Error: {Message}", sqlEx.Message);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error checking overdue tasks: {Message}", ex.Message);
-            }
+                try
+                {
+                    await CheckAndPublishOverdueTasks(stoppingToken);
+                }
+                catch (Microsoft.Data.SqlClient.SqlException sqlEx)
+                {
+                    _logger.LogError(sqlEx, "Database error checking overdue tasks. This may indicate a schema mismatch. Error: {Message}", sqlEx.Message);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error checking overdue tasks: {Message}", ex.Message);
+                }
 
-            await System.Threading.Tasks.Task.Delay(_checkInterval, stoppingToken);
+                await System.Threading.Tasks.Task.Delay(_options.CheckInterval, stoppingToken);
+            }
+        }
+        finally
+        {
+            _rabbitMQService.StopConsuming();
         }
     }
 
@@ -61,78 +79,36 @@ public class TaskReminderService : BackgroundService
 
         try
         {
-            var now = DateTime.UtcNow;
-            _logger.LogDebug("Checking for overdue tasks (current time: {Now})", now);
-            
-            var overdueTasks = await dbContext.Tasks
-                .Include(t => t.UserTasks)
-                    .ThenInclude(ut => ut.User)
-                .Where(t => t.DueDate <= now)
-                .ToListAsync(cancellationToken);
-
-            foreach (var task in overdueTasks)
-            {
-                foreach (var userTask in task.UserTasks)
-                {
-                    var reminderMessage = new
-                    {
-                        TaskId = task.Id,
-                        TaskTitle = task.Title,
-                        DueDate = task.DueDate,
-                        UserName = userTask.User.FullName,
-                        UserEmail = userTask.User.Email,
-                        Role = userTask.Role.ToString()
-                    };
-
-                    var messageJson = JsonSerializer.Serialize(reminderMessage);
-                    _rabbitMQService.PublishMessage(ReminderQueueName, messageJson);
-
-                    _logger.LogInformation("Published reminder for overdue task: {TaskId} - {TaskTitle} to user: {UserName}", 
-                        task.Id, task.Title, userTask.User.FullName);
-                }
-            }
-
-            if (overdueTasks.Any())
-            {
-                _logger.LogInformation("Found and published {Count} overdue task reminder(s)", overdueTasks.Count);
-            }
-            else
-            {
-                _logger.LogInformation("Checked for overdue tasks. No overdue tasks found (checked {TaskCount} total tasks)", 
-                    await dbContext.Tasks.CountAsync(cancellationToken));
-            }
+            await OverdueTaskPublisher.PublishOverdueRemindersAsync(
+                dbContext, _rabbitMQService, _options.QueueName, _logger, cancellationToken);
         }
-            catch (Microsoft.Data.SqlClient.SqlException sqlEx)
-            {
-                _logger.LogError(sqlEx, "Database error in CheckAndPublishOverdueTasks: {Message}", sqlEx.Message);
-                throw; // Re-throw to be caught by outer handler
-            }
+        catch (Microsoft.Data.SqlClient.SqlException sqlEx)
+        {
+            _logger.LogError(sqlEx, "Database error in CheckAndPublishOverdueTasks: {Message}", sqlEx.Message);
+            throw;
+        }
     }
 
-    private void ProcessReminder(string message)
+    private bool ProcessReminder(string message)
     {
         try
         {
             var reminder = JsonSerializer.Deserialize<ReminderMessage>(message);
             if (reminder != null)
             {
-                // Log the message in the required format
-                var logMessage = $"Hi your Task is due {reminder.TaskTitle}";
-                _logger.LogInformation(logMessage);
+                var correlationId = reminder.CorrelationId ?? "(none)";
+                _logger.LogInformation(
+                    "Reminder processed: Task {TaskId} - {TaskTitle} for {UserName} [CorrelationId: {CorrelationId}]",
+                    reminder.TaskId, reminder.TaskTitle, reminder.UserName, correlationId);
+                return true;
             }
+            _logger.LogWarning("Received null or invalid reminder message");
+            return false;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing reminder message: {Message}", message);
+            return false;
         }
-    }
-
-    private class ReminderMessage
-    {
-        public int TaskId { get; set; }
-        public string TaskTitle { get; set; } = string.Empty;
-        public DateTime DueDate { get; set; }
-        public string UserName { get; set; } = string.Empty;
-        public string UserEmail { get; set; } = string.Empty;
     }
 }
