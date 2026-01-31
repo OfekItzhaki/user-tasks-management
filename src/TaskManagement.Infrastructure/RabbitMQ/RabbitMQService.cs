@@ -24,7 +24,10 @@ public class RabbitMQService : IRabbitMQService, IDisposable
     {
         if (!EnsureConnected())
         {
-            _logger.LogError("Failed to publish message to queue {QueueName}: RabbitMQ is not available", queueName);
+            if (IsLocalMode())
+                _logger.LogInformation("RabbitMQ not available (Local mode). Skipping publish to {QueueName}.", queueName);
+            else
+                _logger.LogError("Failed to publish message to queue {QueueName}: RabbitMQ is not available", queueName);
             return;
         }
 
@@ -54,7 +57,10 @@ public class RabbitMQService : IRabbitMQService, IDisposable
     {
         if (!EnsureConnected())
         {
-            _logger.LogError("Failed to start consuming from queue {QueueName}: RabbitMQ is not available", queueName);
+            if (IsLocalMode())
+                _logger.LogInformation("RabbitMQ not available (Local mode). Reminder queue {QueueName} will not be consumed.", queueName);
+            else
+                _logger.LogError("Failed to start consuming from queue {QueueName}: RabbitMQ is not available", queueName);
             return;
         }
 
@@ -142,11 +148,19 @@ public class RabbitMQService : IRabbitMQService, IDisposable
         }
     }
 
+    private static bool IsLocalMode()
+    {
+        var v = Environment.GetEnvironmentVariable("TASKMANAGEMENT_LOCAL_MODE");
+        return string.Equals(v, "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(v, "true", StringComparison.OrdinalIgnoreCase);
+    }
+
     private bool EnsureConnected()
     {
         if (_connection.IsConnected && _connection.Channel != null)
             return true;
-        _logger.LogWarning("RabbitMQ is not connected. Attempting to reconnect...");
+        if (!IsLocalMode())
+            _logger.LogWarning("RabbitMQ is not connected. Attempting to reconnect...");
         _connection.TryConnect();
         return _connection.IsConnected && _connection.Channel != null;
     }

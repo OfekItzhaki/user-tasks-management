@@ -2,6 +2,17 @@
 
 A full-stack web application for managing user tasks with a .NET Core backend, React frontend, SQL Server database, and Windows Service with RabbitMQ integration.
 
+## Quick Start (Option 1 – Docker, any computer)
+
+After a **clean clone**, you can run the app with minimal setup:
+
+1. **Prerequisites** (install once): [Docker Desktop](https://www.docker.com/products/docker-desktop) (running), [.NET 8 SDK](https://dotnet.microsoft.com/download), [Node.js 20+](https://nodejs.org/).
+2. **From the cloned repo folder:** double-click **`First setup.bat`** (or run `.\First setup.ps1`).
+3. **Choose `1`** (Docker). The script will start SQL Server and RabbitMQ in Docker, restore packages, run migrations, and start the API, frontend, and Windows Service.
+4. **Open** [http://localhost:5173](http://localhost:5173) for the app and [http://localhost:5063/swagger](http://localhost:5063/swagger) for the API.
+
+No manual database or RabbitMQ setup needed when using Option 1.
+
 ## Quick Links
 
 - 🆕 **[FRESH_MACHINE_SETUP.md](instructions/FRESH_MACHINE_SETUP.md)** - **Start here if setting up on a new machine**

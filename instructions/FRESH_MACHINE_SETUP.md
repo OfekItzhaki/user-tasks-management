@@ -2,6 +2,10 @@
 
 This guide walks you through setting up the Task Management System on a completely new machine from scratch.
 
+**Easiest path (any computer):** After installing prerequisites below, clone the repo, open the cloned folder, then **double-click `First setup.bat`** and choose **1** (Docker). The script will set everything up and start the app. No manual steps needed.
+
+---
+
 ## Step 1: Install Prerequisites
 
 Before cloning the repository, install these required tools:
@@ -58,11 +62,17 @@ Choose one of these automated scripts based on your setup:
 
 ### Option A: Docker Automated (Recommended)
 
-If you installed Docker Desktop, run:
+If you installed Docker Desktop:
 
-```powershell
-.\scripts\quick-start\quick-start-docker-automated.ps1
-```
+1. Open the cloned repo folder and **double-click `First setup.bat`**, then choose **1** (Docker).
+
+   Or from PowerShell in the repo folder:
+   ```powershell
+   .\First setup.ps1
+   ```
+   Then enter **1**.
+
+2. The script runs `quick-start-docker-automated.ps1` automatically.
 
 **What it does:**
 - ✅ Checks all prerequisites

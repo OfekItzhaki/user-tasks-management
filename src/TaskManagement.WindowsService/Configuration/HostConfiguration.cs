@@ -78,29 +78,6 @@ public static class HostConfiguration
         logger.LogInformation("Service will check for overdue tasks every {Interval} minute(s), queue: {QueueName}", 
             options.CheckInterval.TotalMinutes, options.QueueName);
         logger.LogInformation("========================================");
-
-        // Log connection string (mask password)
-        var maskedConnectionString = MaskPassword(connectionString);
-        logger.LogInformation("Using database connection: {ConnectionString}", maskedConnectionString);
         logger.LogInformation("Environment: {Environment}", environmentName);
-    }
-
-    private static string MaskPassword(string connectionString)
-    {
-        if (connectionString.Contains("Password="))
-        {
-            var passwordIndex = connectionString.IndexOf("Password=");
-            var afterPassword = connectionString.Substring(passwordIndex + 9);
-            var passwordEnd = afterPassword.IndexOf(";");
-            if (passwordEnd > 0)
-            {
-                return connectionString.Substring(0, passwordIndex + 9) + "***" + connectionString.Substring(passwordIndex + 9 + passwordEnd);
-            }
-            else
-            {
-                return connectionString.Substring(0, passwordIndex + 9) + "***";
-            }
-        }
-        return connectionString;
     }
 }
