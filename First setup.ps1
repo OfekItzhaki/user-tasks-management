@@ -65,17 +65,91 @@ if ($choice -eq "1") {
         Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
     } catch { }
     if (-not $dockerResponding) {
-        Write-Host "========================================" -ForegroundColor Red
-        Write-Host "  DOCKER IS NOT RUNNING" -ForegroundColor Red
-        Write-Host "========================================" -ForegroundColor Red
+        Write-Host "========================================" -ForegroundColor Yellow
+        Write-Host "  DOCKER IS NOT RUNNING" -ForegroundColor Yellow
+        Write-Host "========================================" -ForegroundColor Yellow
         Write-Host ""
-        Write-Host "Docker is installed but the Docker daemon is not responding." -ForegroundColor Yellow
+        Write-Host "Docker is installed but not responding. Attempting to start Docker Desktop..." -ForegroundColor Cyan
         Write-Host ""
-        Write-Host "Please start Docker Desktop and wait until it is fully running," -ForegroundColor White
-        Write-Host "then run this setup again." -ForegroundColor White
-        Write-Host ""
-        Wait-EnterOrEscape
-        exit 1
+        
+        # Try to find and start Docker Desktop
+        $dockerDesktopPath = "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+        if (Test-Path $dockerDesktopPath) {
+            try {
+                Start-Process -FilePath $dockerDesktopPath -ErrorAction Stop
+                Write-Host "Docker Desktop is starting... Please wait." -ForegroundColor Cyan
+                Write-Host ""
+                
+                # Wait for Docker to become responsive (up to 120 seconds)
+                $maxWaitSeconds = 120
+                $waitInterval = 5
+                $elapsedSeconds = 0
+                $dockerStarted = $false
+                
+                while ($elapsedSeconds -lt $maxWaitSeconds) {
+                    Start-Sleep -Seconds $waitInterval
+                    $elapsedSeconds += $waitInterval
+                    
+                    Write-Host "Waiting for Docker to start... ($elapsedSeconds seconds elapsed)" -ForegroundColor Gray
+                    
+                    try {
+                        $job = Start-Job -ScriptBlock { docker ps 2>&1 | Out-Null; return $LASTEXITCODE }
+                        $completed = Wait-Job -Job $job -Timeout 3
+                        if ($completed -and (Receive-Job -Job $job) -eq 0) {
+                            $dockerStarted = $true
+                            Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+                            break
+                        }
+                        Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+                    } catch { }
+                }
+                
+                if ($dockerStarted) {
+                    Write-Host ""
+                    Write-Host "Docker Desktop started successfully!" -ForegroundColor Green
+                    Write-Host ""
+                } else {
+                    Write-Host ""
+                    Write-Host "========================================" -ForegroundColor Red
+                    Write-Host "  DOCKER STARTUP TIMEOUT" -ForegroundColor Red
+                    Write-Host "========================================" -ForegroundColor Red
+                    Write-Host ""
+                    Write-Host "Docker Desktop was started but did not become responsive within $maxWaitSeconds seconds." -ForegroundColor Yellow
+                    Write-Host ""
+                    Write-Host "Please wait for Docker Desktop to fully start, then run this setup again." -ForegroundColor White
+                    Write-Host ""
+                    Wait-EnterOrEscape
+                    exit 1
+                }
+            } catch {
+                Write-Host ""
+                Write-Host "========================================" -ForegroundColor Red
+                Write-Host "  FAILED TO START DOCKER" -ForegroundColor Red
+                Write-Host "========================================" -ForegroundColor Red
+                Write-Host ""
+                Write-Host "Could not start Docker Desktop automatically: $_" -ForegroundColor Yellow
+                Write-Host ""
+                Write-Host "Please start Docker Desktop manually and wait until it is fully running," -ForegroundColor White
+                Write-Host "then run this setup again." -ForegroundColor White
+                Write-Host ""
+                Wait-EnterOrEscape
+                exit 1
+            }
+        } else {
+            Write-Host ""
+            Write-Host "========================================" -ForegroundColor Red
+            Write-Host "  DOCKER DESKTOP NOT FOUND" -ForegroundColor Red
+            Write-Host "========================================" -ForegroundColor Red
+            Write-Host ""
+            Write-Host "Docker Desktop executable not found at the expected location:" -ForegroundColor Yellow
+            Write-Host "  $dockerDesktopPath" -ForegroundColor Gray
+            Write-Host ""
+            Write-Host "Please start Docker Desktop manually and wait until it is fully running," -ForegroundColor White
+            Write-Host "then run this setup again." -ForegroundColor White
+            Write-Host ""
+            Wait-EnterOrEscape
+            exit 1
+        }
     }
     Write-Host "Starting Docker setup..." -ForegroundColor Green
 } elseif ($choice -eq "2") {
