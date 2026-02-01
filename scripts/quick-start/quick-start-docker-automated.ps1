@@ -417,24 +417,31 @@ Write-Host ""
 # Docker Compose uses the compose file's directory as base for relative paths
 # We need to specify --project-directory to use the project root
 Push-Location $projectRoot
-try {
-    # Run docker compose - let output show naturally
-    # Use --project-directory to ensure build contexts resolve correctly
-    # Use --force-recreate to handle any remaining container conflicts
-    if ($composeCommand -eq "docker compose") {
-        docker compose -f $dockerComposePath --project-directory $projectRoot up -d --force-recreate sqlserver rabbitmq
-    } else {
-        docker-compose -f $dockerComposePath --project-directory $projectRoot up -d --force-recreate sqlserver rabbitmq
-    }
-    $dockerExitCode = $LASTEXITCODE
-} catch {
-    # Only catch actual exceptions, not output
-    $dockerExitCode = 1
-    Write-Host ""
-    Write-Host "[X] Exception occurred: $_" -ForegroundColor Red
-} finally {
-    Pop-Location
+
+# Temporarily allow errors to continue so Docker warnings don't terminate the script
+$previousErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+
+# Run docker compose up - redirect output to suppress warnings but capture exit code
+# Use --project-directory to ensure build contexts resolve correctly
+# Use --force-recreate to handle any remaining container conflicts
+if ($composeCommand -eq "docker compose") {
+    $output = docker compose -f $dockerComposePath --project-directory $projectRoot up -d --force-recreate sqlserver rabbitmq 2>&1
+} else {
+    $output = docker-compose -f $dockerComposePath --project-directory $projectRoot up -d --force-recreate sqlserver rabbitmq 2>&1
 }
+$dockerExitCode = $LASTEXITCODE
+
+# Restore error action preference
+$ErrorActionPreference = $previousErrorActionPreference
+
+# Filter out "No services to build" warning from output
+$filteredOutput = $output | Where-Object { $_ -notmatch "No services to build" -and $_ -notmatch "level=warning" }
+if ($filteredOutput) {
+    $filteredOutput | ForEach-Object { Write-Host $_ }
+}
+
+Pop-Location
 
 if ($dockerExitCode -ne 0) {
         Write-Host "[X] Failed to start Docker services" -ForegroundColor Red
@@ -452,18 +459,28 @@ if ($dockerExitCode -ne 0) {
             # Retry starting services
             Write-Host "Pulling images and starting containers..." -ForegroundColor Gray
             Push-Location $projectRoot
-            try {
-                if ($composeCommand -eq "docker compose") {
-                    docker compose -f $dockerComposePath --project-directory $projectRoot up -d --force-recreate sqlserver rabbitmq
-                } else {
-                    docker-compose -f $dockerComposePath --project-directory $projectRoot up -d --force-recreate sqlserver rabbitmq
-                }
-                $retryExitCode = $LASTEXITCODE
-            } catch {
-                $retryExitCode = 1
-            } finally {
-                Pop-Location
+            
+            # Temporarily allow errors to continue
+            $previousErrorActionPreference = $ErrorActionPreference
+            $ErrorActionPreference = "Continue"
+            
+            if ($composeCommand -eq "docker compose") {
+                $output = docker compose -f $dockerComposePath --project-directory $projectRoot up -d --force-recreate sqlserver rabbitmq 2>&1
+            } else {
+                $output = docker-compose -f $dockerComposePath --project-directory $projectRoot up -d --force-recreate sqlserver rabbitmq 2>&1
             }
+            $retryExitCode = $LASTEXITCODE
+            
+            # Restore error action preference
+            $ErrorActionPreference = $previousErrorActionPreference
+            
+            # Filter out "No services to build" warning
+            $filteredOutput = $output | Where-Object { $_ -notmatch "No services to build" -and $_ -notmatch "level=warning" }
+            if ($filteredOutput) {
+                $filteredOutput | ForEach-Object { Write-Host $_ }
+            }
+            
+            Pop-Location
             
             if ($retryExitCode -ne 0) {
                 Write-Host "[X] Still failed to start Docker services after restart" -ForegroundColor Red
@@ -566,12 +583,14 @@ $apiAppsettingsPaths = @(
 foreach ($appsettingsPath in $apiAppsettingsPaths) {
     if (Test-Path $appsettingsPath) {
         $appsettingsContent = Get-Content $appsettingsPath -Raw
-        # Check if connection string needs updating
-        if ($appsettingsContent -notmatch "Server=localhost,1433") {
+        # Check if connection string needs updating (check for placeholder password or wrong server)
+        if ($appsettingsContent -notmatch "Password=YourStrong@Passw0rd123" -or $appsettingsContent -notmatch "Server=localhost,1433") {
             Write-Host "Updating API connection string for Docker SQL Server: $(Split-Path $appsettingsPath -Leaf)..." -ForegroundColor Yellow
             $appsettingsContent = $appsettingsContent -replace '(?s)"ConnectionStrings":\s*\{[^}]*"DefaultConnection":\s*"[^"]*"', "`"ConnectionStrings`": {`n    `"DefaultConnection`": `"$dockerConnectionString`""
             Set-Content -Path $appsettingsPath -Value $appsettingsContent -NoNewline
             Write-Host "[OK] API connection string updated: $(Split-Path $appsettingsPath -Leaf)" -ForegroundColor Green
+        } else {
+            Write-Host "[OK] API connection string already configured: $(Split-Path $appsettingsPath -Leaf)" -ForegroundColor Green
         }
     }
 }
@@ -731,8 +750,17 @@ try {
     
     # Run migrations
     Write-Host "  Running migrations..." -ForegroundColor Gray
+    
+    # Set connection string as environment variable for migrations
+    $env:ConnectionStrings__DefaultConnection = $dockerConnectionString
+    
     $migrationOutput = dotnet ef database update --project $infraProjectPath --startup-project $apiProjectPath 2>&1
-    if ($LASTEXITCODE -eq 0) {
+    $migrationExitCode = $LASTEXITCODE
+    
+    # Clear the environment variable after use
+    Remove-Item Env:\ConnectionStrings__DefaultConnection -ErrorAction SilentlyContinue
+    
+    if ($migrationExitCode -eq 0) {
         Write-Host "[OK] Database migrations applied" -ForegroundColor Green
     } else {
         Write-Host "[X] Database migration failed" -ForegroundColor Red
