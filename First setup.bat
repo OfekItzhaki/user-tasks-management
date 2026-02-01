@@ -1,16 +1,16 @@
 @echo off
 REM First Setup - Double-click to run
-REM This batch file runs the PowerShell setup script
+REM Run from repo root after a clean clone for Option 1 (Docker) or Option 2 (Local).
+
+REM Ensure we run from the folder containing this batch file (repo root)
+cd /d "%~dp0"
 
 echo ========================================
 echo Task Management System - First Setup
 echo ========================================
 echo.
 
-REM Get the directory where this batch file is located
 set "SCRIPT_DIR=%~dp0"
-
-REM Run the PowerShell script
 powershell.exe -ExecutionPolicy Bypass -NoProfile -File "%SCRIPT_DIR%First setup.ps1"
 
 REM Pause to see any errors

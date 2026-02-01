@@ -1,8 +1,11 @@
 # Quick Start - Local (Automated)
-# Uses LocalDB instead of Docker
+# Uses LocalDB or full SQL Server (no Docker)
 # This script checks prerequisites and runs everything automatically
 
 $ErrorActionPreference = "Stop"
+
+# Local mode: Windows Service and API will not try Docker or show Docker messages
+$env:TASKMANAGEMENT_LOCAL_MODE = "1"
 
 # Fix PATH for .NET SDK
 $env:DOTNET_ROOT = "C:\Program Files\dotnet"
@@ -47,18 +50,18 @@ if (-not (Test-Command "node")) {
     Write-Host "[OK] Node.js: $version" -ForegroundColor Green
 }
 
-# Check SQL Server LocalDB
+# Check SQL Server: LocalDB or full instance (e.g. MSSQLSERVER)
 $localdbFound = $false
+$fullSqlServerRunning = $false
 try {
     $localdbInfo = sqllocaldb info mssqllocaldb 2>&1
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[OK] SQL Server LocalDB: Available" -ForegroundColor Green
         $localdbFound = $true
-        # Start LocalDB if not running
         sqllocaldb start mssqllocaldb 2>&1 | Out-Null
     }
-} catch {
-    # Try to find LocalDB in common locations
+} catch { }
+if (-not $localdbFound) {
     $localdbPaths = @(
         "C:\Program Files\Microsoft SQL Server\150\Tools\Binn\SqlLocalDB.exe",
         "C:\Program Files\Microsoft SQL Server\160\Tools\Binn\SqlLocalDB.exe"
@@ -71,12 +74,26 @@ try {
         }
     }
 }
-
 if (-not $localdbFound) {
-    Write-Host "[!] SQL Server LocalDB: Not found" -ForegroundColor Yellow
-    Write-Host "  LocalDB usually comes with Visual Studio" -ForegroundColor Gray
-    Write-Host "  Or install SQL Server Express: https://www.microsoft.com/sql-server/sql-server-downloads" -ForegroundColor Gray
-    Write-Host "  Continuing anyway (will try to use connection string)" -ForegroundColor Yellow
+    $mssql = Get-Service -Name "MSSQLSERVER" -ErrorAction SilentlyContinue
+    if ($mssql -and $mssql.Status -eq "Running") {
+        Write-Host "[OK] SQL Server (full instance): MSSQLSERVER is running" -ForegroundColor Green
+        $fullSqlServerRunning = $true
+    }
+}
+
+if (-not $localdbFound -and -not $fullSqlServerRunning) {
+    Write-Host ""
+    Write-Host "========================================" -ForegroundColor Red
+    Write-Host "  SQL SERVER IS REQUIRED" -ForegroundColor Red
+    Write-Host "========================================" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Local (option 2) needs LocalDB or full SQL Server (MSSQLSERVER service running)." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  - LocalDB: https://www.microsoft.com/sql-server/sql-server-downloads (Express + LocalDB)" -ForegroundColor Cyan
+    Write-Host "  - Full SQL Server: Start the 'SQL Server (MSSQLSERVER)' service in Windows Services" -ForegroundColor Cyan
+    Write-Host ""
+    exit 1
 }
 
 Write-Host ""
@@ -118,13 +135,20 @@ if (-not (Test-Path $apiPath)) {
     exit 1
 }
 
-# Ensure LocalDB is started
-Write-Host "Starting LocalDB..." -ForegroundColor Yellow
-try {
-    sqllocaldb start mssqllocaldb 2>&1 | Out-Null
-    Write-Host "[OK] LocalDB started" -ForegroundColor Green
-} catch {
-    Write-Host "[!] Could not start LocalDB automatically. Continuing..." -ForegroundColor Yellow
+# Set connection string and ensure database is ready
+if ($localdbFound) {
+    Write-Host "Starting LocalDB..." -ForegroundColor Yellow
+    try {
+        sqllocaldb start mssqllocaldb 2>&1 | Out-Null
+        Write-Host "[OK] LocalDB started" -ForegroundColor Green
+    } catch {
+        Write-Host "[!] Could not start LocalDB. Continuing..." -ForegroundColor Yellow
+    }
+    $env:ConnectionStrings__DefaultConnection = "Server=(localdb)\mssqllocaldb;Database=TaskManagementDb;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True"
+    Write-Host "Using LocalDB for migrations and API." -ForegroundColor Gray
+} else {
+    $env:ConnectionStrings__DefaultConnection = "Server=localhost;Database=TaskManagementDb;Integrated Security=True;TrustServerCertificate=True;MultipleActiveResultSets=true"
+    Write-Host "Using full SQL Server (localhost) for migrations and API." -ForegroundColor Gray
 }
 Write-Host ""
 
@@ -361,15 +385,30 @@ if (Test-Path (Join-Path $webPath "node_modules")) {
 
 Write-Host ""
 
-# Step 4: Offer to seed database
+# Step 4: Offer to seed database only if DB is empty
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Step 4: Database Seeding (Optional)" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "Would you like to seed the database with sample data?" -ForegroundColor Yellow
-Write-Host "This will create sample users, tags, and tasks for testing." -ForegroundColor Gray
-Write-Host ""
-$seedChoice = Read-Host "Seed database? (y/n)"
+
+$dbEmpty = $true
+try {
+    $server = if ($localdbFound) { "(localdb)\mssqllocaldb" } else { "localhost" }
+    $countResult = sqlcmd -S $server -d TaskManagementDb -E -Q "SELECT COUNT(*) FROM Users" -h -1 -W 2>&1 | Out-String
+    $countResult = ($countResult -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '\d+' } | Select-Object -First 1)
+    if ($countResult -match '(\d+)') {
+        $dbEmpty = ([int]$Matches[1] -eq 0)
+    }
+} catch { }
+
+if (-not $dbEmpty) {
+    Write-Host "Database already has data. Skipping optional seeding." -ForegroundColor Gray
+    Write-Host ""
+} else {
+    Write-Host "Would you like to seed the database with sample data?" -ForegroundColor Yellow
+    Write-Host "This will create sample users, tags, and tasks for testing." -ForegroundColor Gray
+    Write-Host ""
+    $seedChoice = Read-Host "Seed database? (y/n)"
 
 if ($seedChoice -eq "y" -or $seedChoice -eq "Y") {
     Write-Host ""
@@ -405,6 +444,7 @@ if ($seedChoice -eq "y" -or $seedChoice -eq "Y") {
     Write-Host "You can seed it later:" -ForegroundColor Gray
     Write-Host "  POST http://localhost:5063/api/seed" -ForegroundColor Cyan
     Write-Host "  Or use Swagger UI: http://localhost:5063/swagger" -ForegroundColor Cyan
+}
 }
 
 Write-Host ""

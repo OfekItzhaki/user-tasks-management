@@ -20,18 +20,18 @@ public class TaskReminderServiceOptions
 public class TaskReminderService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<TaskReminderService> _logger;
+    private readonly ILogger _logger;
     private readonly IRabbitMQService _rabbitMQService;
     private readonly TaskReminderServiceOptions _options;
 
     public TaskReminderService(
         IServiceProvider serviceProvider,
-        ILogger<TaskReminderService> logger,
+        ILoggerFactory loggerFactory,
         IRabbitMQService rabbitMQService,
         IOptions<TaskReminderServiceOptions> options)
     {
         _serviceProvider = serviceProvider;
-        _logger = logger;
+        _logger = loggerFactory.CreateLogger("TaskReminderService");
         _rabbitMQService = rabbitMQService;
         _options = options.Value;
     }

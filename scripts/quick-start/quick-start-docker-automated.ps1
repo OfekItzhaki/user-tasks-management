@@ -1,12 +1,29 @@
 # Quick Start - Docker (Automated)
 # Easiest option: Uses Docker for SQL Server and RabbitMQ
-# This script checks prerequisites and runs everything automatically
+# Run from repo root (e.g. via First setup.bat) so paths resolve correctly.
 
 $ErrorActionPreference = "Stop"
 
 # Fix PATH for .NET SDK
 $env:DOTNET_ROOT = "C:\Program Files\dotnet"
 $env:PATH = "C:\Program Files\dotnet;$env:PATH"
+
+# Always run from repo root so dotnet/npm paths and docker-compose work on any machine
+$projectRoot = Join-Path $PSScriptRoot "..\.."
+$dockerComposePath = Join-Path $projectRoot "docker\docker-compose.yml"
+if (-not (Test-Path $dockerComposePath)) {
+    Write-Host "[X] Repository root not found or docker-compose.yml missing." -ForegroundColor Red
+    Write-Host "    Run this from the repo root (e.g. double-click First setup.bat from the cloned folder)." -ForegroundColor Yellow
+    Write-Host "    Expected: $dockerComposePath" -ForegroundColor Gray
+    exit 1
+}
+$solutionFile = Get-ChildItem -Path $projectRoot -Filter "*.sln" -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $solutionFile) {
+    Write-Host "[X] No solution file (.sln) found in repository root." -ForegroundColor Red
+    Write-Host "    Ensure you cloned the full repository." -ForegroundColor Yellow
+    exit 1
+}
+Set-Location $projectRoot
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Quick Start - Docker (Automated)" -ForegroundColor Cyan
@@ -400,24 +417,31 @@ Write-Host ""
 # Docker Compose uses the compose file's directory as base for relative paths
 # We need to specify --project-directory to use the project root
 Push-Location $projectRoot
-try {
-    # Run docker compose - let output show naturally
-    # Use --project-directory to ensure build contexts resolve correctly
-    # Use --force-recreate to handle any remaining container conflicts
-    if ($composeCommand -eq "docker compose") {
-        docker compose -f $dockerComposePath --project-directory $projectRoot up -d --force-recreate sqlserver rabbitmq
-    } else {
-        docker-compose -f $dockerComposePath --project-directory $projectRoot up -d --force-recreate sqlserver rabbitmq
-    }
-    $dockerExitCode = $LASTEXITCODE
-} catch {
-    # Only catch actual exceptions, not output
-    $dockerExitCode = 1
-    Write-Host ""
-    Write-Host "[X] Exception occurred: $_" -ForegroundColor Red
-} finally {
-    Pop-Location
+
+# Temporarily allow errors to continue so Docker warnings don't terminate the script
+$previousErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+
+# Run docker compose up - redirect output to suppress warnings but capture exit code
+# Use --project-directory to ensure build contexts resolve correctly
+# Use --force-recreate to handle any remaining container conflicts
+if ($composeCommand -eq "docker compose") {
+    $output = docker compose -f $dockerComposePath --project-directory $projectRoot up -d --force-recreate sqlserver rabbitmq 2>&1
+} else {
+    $output = docker-compose -f $dockerComposePath --project-directory $projectRoot up -d --force-recreate sqlserver rabbitmq 2>&1
 }
+$dockerExitCode = $LASTEXITCODE
+
+# Restore error action preference
+$ErrorActionPreference = $previousErrorActionPreference
+
+# Filter out "No services to build" warning from output
+$filteredOutput = $output | Where-Object { $_ -notmatch "No services to build" -and $_ -notmatch "level=warning" }
+if ($filteredOutput) {
+    $filteredOutput | ForEach-Object { Write-Host $_ }
+}
+
+Pop-Location
 
 if ($dockerExitCode -ne 0) {
         Write-Host "[X] Failed to start Docker services" -ForegroundColor Red
@@ -435,18 +459,28 @@ if ($dockerExitCode -ne 0) {
             # Retry starting services
             Write-Host "Pulling images and starting containers..." -ForegroundColor Gray
             Push-Location $projectRoot
-            try {
-                if ($composeCommand -eq "docker compose") {
-                    docker compose -f $dockerComposePath --project-directory $projectRoot up -d --force-recreate sqlserver rabbitmq
-                } else {
-                    docker-compose -f $dockerComposePath --project-directory $projectRoot up -d --force-recreate sqlserver rabbitmq
-                }
-                $retryExitCode = $LASTEXITCODE
-            } catch {
-                $retryExitCode = 1
-            } finally {
-                Pop-Location
+            
+            # Temporarily allow errors to continue
+            $previousErrorActionPreference = $ErrorActionPreference
+            $ErrorActionPreference = "Continue"
+            
+            if ($composeCommand -eq "docker compose") {
+                $output = docker compose -f $dockerComposePath --project-directory $projectRoot up -d --force-recreate sqlserver rabbitmq 2>&1
+            } else {
+                $output = docker-compose -f $dockerComposePath --project-directory $projectRoot up -d --force-recreate sqlserver rabbitmq 2>&1
             }
+            $retryExitCode = $LASTEXITCODE
+            
+            # Restore error action preference
+            $ErrorActionPreference = $previousErrorActionPreference
+            
+            # Filter out "No services to build" warning
+            $filteredOutput = $output | Where-Object { $_ -notmatch "No services to build" -and $_ -notmatch "level=warning" }
+            if ($filteredOutput) {
+                $filteredOutput | ForEach-Object { Write-Host $_ }
+            }
+            
+            Pop-Location
             
             if ($retryExitCode -ne 0) {
                 Write-Host "[X] Still failed to start Docker services after restart" -ForegroundColor Red
@@ -549,12 +583,14 @@ $apiAppsettingsPaths = @(
 foreach ($appsettingsPath in $apiAppsettingsPaths) {
     if (Test-Path $appsettingsPath) {
         $appsettingsContent = Get-Content $appsettingsPath -Raw
-        # Check if connection string needs updating
-        if ($appsettingsContent -notmatch "Server=localhost,1433") {
+        # Check if connection string needs updating (check for placeholder password or wrong server)
+        if ($appsettingsContent -notmatch "Password=YourStrong@Passw0rd123" -or $appsettingsContent -notmatch "Server=localhost,1433") {
             Write-Host "Updating API connection string for Docker SQL Server: $(Split-Path $appsettingsPath -Leaf)..." -ForegroundColor Yellow
             $appsettingsContent = $appsettingsContent -replace '(?s)"ConnectionStrings":\s*\{[^}]*"DefaultConnection":\s*"[^"]*"', "`"ConnectionStrings`": {`n    `"DefaultConnection`": `"$dockerConnectionString`""
             Set-Content -Path $appsettingsPath -Value $appsettingsContent -NoNewline
             Write-Host "[OK] API connection string updated: $(Split-Path $appsettingsPath -Leaf)" -ForegroundColor Green
+        } else {
+            Write-Host "[OK] API connection string already configured: $(Split-Path $appsettingsPath -Leaf)" -ForegroundColor Green
         }
     }
 }
@@ -714,8 +750,17 @@ try {
     
     # Run migrations
     Write-Host "  Running migrations..." -ForegroundColor Gray
+    
+    # Set connection string as environment variable for migrations
+    $env:ConnectionStrings__DefaultConnection = $dockerConnectionString
+    
     $migrationOutput = dotnet ef database update --project $infraProjectPath --startup-project $apiProjectPath 2>&1
-    if ($LASTEXITCODE -eq 0) {
+    $migrationExitCode = $LASTEXITCODE
+    
+    # Clear the environment variable after use
+    Remove-Item Env:\ConnectionStrings__DefaultConnection -ErrorAction SilentlyContinue
+    
+    if ($migrationExitCode -eq 0) {
         Write-Host "[OK] Database migrations applied" -ForegroundColor Green
     } else {
         Write-Host "[X] Database migration failed" -ForegroundColor Red
@@ -832,15 +877,29 @@ if (Test-Path (Join-Path $webPath "node_modules")) {
 
 Write-Host ""
 
-# Step 5: Offer to seed database
+# Step 5: Offer to seed database only if DB is empty
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Step 5: Database Seeding (Optional)" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "Would you like to seed the database with sample data?" -ForegroundColor Yellow
-Write-Host "This will create sample users, tags, and tasks for testing." -ForegroundColor Gray
-Write-Host ""
-$seedChoice = Read-Host "Seed database? (y/n)"
+
+$dbEmpty = $true
+try {
+    $countResult = sqlcmd -S localhost,1433 -d TaskManagementDb -U sa -P "YourStrong@Passw0rd123" -Q "SELECT COUNT(*) FROM Users" -h -1 -W 2>&1 | Out-String
+    $countResult = ($countResult -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '\d+' } | Select-Object -First 1)
+    if ($countResult -match '(\d+)') {
+        $dbEmpty = ([int]$Matches[1] -eq 0)
+    }
+} catch { }
+
+if (-not $dbEmpty) {
+    Write-Host "Database already has data. Skipping optional seeding." -ForegroundColor Gray
+    Write-Host ""
+} else {
+    Write-Host "Would you like to seed the database with sample data?" -ForegroundColor Yellow
+    Write-Host "This will create sample users, tags, and tasks for testing." -ForegroundColor Gray
+    Write-Host ""
+    $seedChoice = Read-Host "Seed database? (y/n)"
 
 if ($seedChoice -eq "y" -or $seedChoice -eq "Y") {
     Write-Host ""
@@ -876,6 +935,7 @@ if ($seedChoice -eq "y" -or $seedChoice -eq "Y") {
     Write-Host "You can seed it later:" -ForegroundColor Gray
     Write-Host "  POST http://localhost:5063/api/seed" -ForegroundColor Cyan
     Write-Host "  Or use Swagger UI: http://localhost:5063/swagger" -ForegroundColor Cyan
+}
 }
 
 Write-Host ""

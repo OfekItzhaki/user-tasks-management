@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 using TaskManagement.Infrastructure.Data;
 using TaskManagement.Infrastructure.RabbitMQ;
 using TaskManagement.WindowsService.Services;
@@ -27,15 +28,10 @@ public static class HostConfiguration
     private static void ConfigureLogging(HostApplicationBuilder builder)
     {
         builder.Logging.ClearProviders();
+        builder.Services.AddSingleton<ConsoleFormatter, CleanConsoleFormatter>();
         builder.Logging.AddConsole(options =>
         {
-            options.FormatterName = "simple";
-        });
-        builder.Logging.AddSimpleConsole(options =>
-        {
-            options.IncludeScopes = false;
-            options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
-            options.ColorBehavior = Microsoft.Extensions.Logging.Console.LoggerColorBehavior.Enabled;
+            options.FormatterName = "clean";
         });
     }
 
@@ -78,29 +74,6 @@ public static class HostConfiguration
         logger.LogInformation("Service will check for overdue tasks every {Interval} minute(s), queue: {QueueName}", 
             options.CheckInterval.TotalMinutes, options.QueueName);
         logger.LogInformation("========================================");
-
-        // Log connection string (mask password)
-        var maskedConnectionString = MaskPassword(connectionString);
-        logger.LogInformation("Using database connection: {ConnectionString}", maskedConnectionString);
         logger.LogInformation("Environment: {Environment}", environmentName);
-    }
-
-    private static string MaskPassword(string connectionString)
-    {
-        if (connectionString.Contains("Password="))
-        {
-            var passwordIndex = connectionString.IndexOf("Password=");
-            var afterPassword = connectionString.Substring(passwordIndex + 9);
-            var passwordEnd = afterPassword.IndexOf(";");
-            if (passwordEnd > 0)
-            {
-                return connectionString.Substring(0, passwordIndex + 9) + "***" + connectionString.Substring(passwordIndex + 9 + passwordEnd);
-            }
-            else
-            {
-                return connectionString.Substring(0, passwordIndex + 9) + "***";
-            }
-        }
-        return connectionString;
     }
 }

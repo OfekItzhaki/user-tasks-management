@@ -13,9 +13,9 @@ builder.Services.AddCorsPolicy(builder.Configuration, builder.Environment);
 var app = builder.Build();
 
 // Configure middleware pipeline (order matters)
-app.UseMiddleware<Middleware.CorrelationIdMiddleware>();
-app.UseMiddleware<Middleware.RequestResponseLoggingMiddleware>();
-app.UseMiddleware<Middleware.SecurityHeadersMiddleware>();
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseMiddleware<RequestResponseLoggingMiddleware>();
+app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseMiddleware<ExceptionMiddleware>();
 
 if (app.Environment.IsDevelopment())

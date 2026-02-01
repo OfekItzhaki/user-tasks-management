@@ -4,7 +4,8 @@ using RabbitMQ.Client;
 namespace TaskManagement.Infrastructure.RabbitMQ;
 
 /// <summary>
-/// Manages RabbitMQ connection and channel with retry logic
+/// Manages RabbitMQ connection and channel with retry logic.
+/// In Local mode (TASKMANAGEMENT_LOCAL_MODE=1), logs once and does not mention Docker.
 /// </summary>
 internal sealed class RabbitMQConnection : IDisposable
 {
@@ -12,9 +13,17 @@ internal sealed class RabbitMQConnection : IDisposable
     private readonly string _hostName;
     private IConnection? _connection;
     private IModel? _channel;
+    private bool _localModeFailureLogged;
 
     public bool IsConnected { get; private set; }
     public IModel? Channel => _channel;
+
+    private static bool IsLocalMode()
+    {
+        var v = Environment.GetEnvironmentVariable("TASKMANAGEMENT_LOCAL_MODE");
+        return string.Equals(v, "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(v, "true", StringComparison.OrdinalIgnoreCase);
+    }
 
     public RabbitMQConnection(ILogger<RabbitMQService> logger, string hostName)
     {
@@ -25,6 +34,12 @@ internal sealed class RabbitMQConnection : IDisposable
 
     public void TryConnect()
     {
+        if (IsLocalMode())
+        {
+            TryConnectLocalMode();
+            return;
+        }
+
         const int maxRetries = 5;
         int[] retryDelays = { 2000, 4000, 8000, 16000, 0 };
 
@@ -59,6 +74,33 @@ internal sealed class RabbitMQConnection : IDisposable
                         _hostName, maxRetries);
                     IsConnected = false;
                 }
+            }
+        }
+    }
+
+    private void TryConnectLocalMode()
+    {
+        try
+        {
+            var factory = new ConnectionFactory
+            {
+                HostName = _hostName,
+                AutomaticRecoveryEnabled = true,
+                NetworkRecoveryInterval = TimeSpan.FromSeconds(10),
+                RequestedConnectionTimeout = TimeSpan.FromSeconds(3)
+            };
+            _connection = factory.CreateConnection();
+            _channel = _connection.CreateModel();
+            IsConnected = true;
+            _logger.LogInformation("RabbitMQ connected at {HostName}. Reminder features are available.", _hostName);
+        }
+        catch (Exception)
+        {
+            IsConnected = false;
+            if (!_localModeFailureLogged)
+            {
+                _localModeFailureLogged = true;
+                _logger.LogInformation("RabbitMQ is not available. Optional in Local mode — reminder and notification features are disabled.");
             }
         }
     }
