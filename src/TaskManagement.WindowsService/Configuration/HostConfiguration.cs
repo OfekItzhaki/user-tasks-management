@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 using TaskManagement.Infrastructure.Data;
 using TaskManagement.Infrastructure.RabbitMQ;
 using TaskManagement.WindowsService.Services;
@@ -27,15 +28,10 @@ public static class HostConfiguration
     private static void ConfigureLogging(HostApplicationBuilder builder)
     {
         builder.Logging.ClearProviders();
+        builder.Services.AddSingleton<ConsoleFormatter, CleanConsoleFormatter>();
         builder.Logging.AddConsole(options =>
         {
-            options.FormatterName = "simple";
-        });
-        builder.Logging.AddSimpleConsole(options =>
-        {
-            options.IncludeScopes = false;
-            options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
-            options.ColorBehavior = Microsoft.Extensions.Logging.Console.LoggerColorBehavior.Enabled;
+            options.FormatterName = "clean";
         });
     }
 

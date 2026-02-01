@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
+using TaskManagement.WindowsService.Configuration;
 
 namespace TaskManagement.WindowsService.Helpers;
 
@@ -9,13 +11,10 @@ public static class StartupLoggerFactory
 {
     public static ILogger CreateProgramLogger()
     {
-        return LoggerFactory.Create(loggingBuilder => loggingBuilder
-            .AddConsole(options => options.FormatterName = "simple")
-            .AddSimpleConsole(options =>
-            {
-                options.IncludeScopes = false;
-                options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
-                options.ColorBehavior = Microsoft.Extensions.Logging.Console.LoggerColorBehavior.Enabled;
-            })).CreateLogger("Program");
+        return LoggerFactory.Create(loggingBuilder =>
+        {
+            loggingBuilder.Services.AddSingleton<ConsoleFormatter, CleanConsoleFormatter>();
+            loggingBuilder.AddConsole(options => options.FormatterName = "clean");
+        }).CreateLogger("Program");
     }
 }
